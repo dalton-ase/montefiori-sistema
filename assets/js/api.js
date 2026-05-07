@@ -1,17 +1,6 @@
 /**
- * ============================================================
  * ALIANZA CRM — api.js
- * Capa de comunicación con Google Apps Script
  * Desarrollado por Tourlat | tourlat.com
- * Constructora Montefiori S.A.S. / Alianza Empresarial
- * ============================================================
- *
- * NOTA TÉCNICA CORS:
- * Apps Script bloquea preflight cuando se usa
- * Content-Type: application/json desde dominios externos.
- * Solución: enviar como text/plain — Apps Script lo acepta
- * sin preflight y el backend lo parsea normalmente.
- * ============================================================
  */
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbzHBGJ63nVsglPzBxHLoKAltsrsx8t16w9DrHffQ6_y5a70LVnQpHutof_OMb6tNsgWeQ/exec';
@@ -19,20 +8,14 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzHBGJ63nVsglPzBxHLoKAl
 async function api(action, data = {}) {
   const body = { action, data };
   if (APP.token) body.token = APP.token;
-
   const res = await fetch(API_URL, {
-    method:  'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body:    JSON.stringify(body)
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
   });
-
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch(e) {
-    throw new Error('Respuesta invalida: ' + text.substring(0, 100));
-  }
+  return JSON.parse(text);
 }
 
 async function apiLogin(cedula, password)          { return api('login', { cedula, password }); }
