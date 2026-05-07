@@ -1,21 +1,32 @@
 /**
- * ALIANZA CRM — api.js
+ * ============================================================
+ * ALIANZA CRM — api.js v1.1
+ * Capa de comunicación con Google Apps Script
  * Desarrollado por Tourlat | tourlat.com
+ * ============================================================
+ * NOTA TÉCNICA:
+ * Apps Script no permite CORS en doPost desde dominios externos.
+ * Solución: usar doGet con payload en parámetro ?d=
+ * que sí funciona sin restricciones CORS.
+ * ============================================================
  */
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbzHBGJ63nVsglPzBxHLoKAltsrsx8t16w9DrHffQ6_y5a70LVnQpHutof_OMb6tNsgWeQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxsSzvC2X4LWKEP08_JUd6AZNh40yWbykCkvns2dRlTi21oYiX2FfBITF82QtAquzf-Mw/exec';
 
 async function api(action, data = {}) {
   const body = { action, data };
   if (APP.token) body.token = APP.token;
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body)
-  });
+
+  const url = API_URL + '?d=' + encodeURIComponent(JSON.stringify(body));
+  const res = await fetch(url, { method: 'GET' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
+
   const text = await res.text();
-  return JSON.parse(text);
+  try {
+    return JSON.parse(text);
+  } catch(e) {
+    throw new Error('Respuesta invalida del servidor');
+  }
 }
 
 async function apiLogin(cedula, password)          { return api('login', { cedula, password }); }
