@@ -3,7 +3,6 @@
  * ALIANZA CRM — variables.css
  * Tokens de diseño · Identidad visual Tourlat
  * Desarrollado por Tourlat | tourlat.com
- * Constructora Montefiori S.A.S. / Alianza Empresarial
  * ============================================================
  */
 :root {
@@ -68,9 +67,9 @@
   --morado-light:   #EEE8FA;
   --morado-borde:   #C4AEF0;
 
-  /* Tipografía */
-  --font-display:   'Syne', sans-serif;
-  --font-body:      'DM Sans', sans-serif;
+  /* ── TIPOGRAFÍA — Montserrat ── */
+  --font-display:   'Montserrat', sans-serif;
+  --font-body:      'Montserrat', sans-serif;
 
   /* Tamaños */
   --text-xs:    0.70rem;
