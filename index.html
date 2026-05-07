@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  ALIANZA CRM — Sistema de Gestión Transversal
+  Constructora Montefiori S.A.S. / Alianza Empresarial
+  Desarrollado por Tourlat | tourlat.com
+  ============================================================
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Alianza CRM — Sistema de gestión transversal Constructora Montefiori">
+  <meta name="author" content="Tourlat — tourlat.com">
+  <title>Alianza CRM · Tourlat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/variables.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-ring"></div>
+  <div class="loader-txt">CARGANDO</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" role="alert" aria-live="polite"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-deco"></div>
+
+  <div class="login-left">
+    <div class="login-brand">
+      <div class="login-brand-logo">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div>
+        <div class="login-brand-name">Alianza Empresarial</div>
+        <div class="login-brand-sub">Constructora Montefiori S.A.S.</div>
+      </div>
+    </div>
+
+    <h1 class="login-headline">
+      Gestión<br><em>inteligente</em><br>de <strong>clientes.</strong>
+    </h1>
+
+    <p class="login-desc">
+      CRM transversal para el seguimiento de prospectos, negocios, contratos y gestiones de todas las áreas de la organización.
+    </p>
+
+    <div class="login-stats">
+      <div class="login-stat">
+        <div class="login-stat-num">20</div>
+        <div class="login-stat-label">Proyectos activos</div>
+      </div>
+      <div class="login-stat-sep"></div>
+      <div class="login-stat">
+        <div class="login-stat-num">8</div>
+        <div class="login-stat-label">Áreas integradas</div>
+      </div>
+      <div class="login-stat-sep"></div>
+      <div class="login-stat">
+        <div class="login-stat-num">14</div>
+        <div class="login-stat-label">Módulos de datos</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-form">
+      <div class="login-form-title">Bienvenido</div>
+      <div class="login-form-sub">Ingresa con tu cédula y contraseña</div>
+
+      <div class="login-input-group">
+        <label class="login-label" for="inp-cedula">Cédula</label>
+        <input type="text" id="inp-cedula" class="login-input"
+               placeholder="Número de cédula"
+               autocomplete="username" inputmode="numeric">
+      </div>
+
+      <div class="login-input-group">
+        <label class="login-label" for="inp-pass">Contraseña</label>
+        <input type="password" id="inp-pass" class="login-input"
+               placeholder="Contraseña"
+               autocomplete="current-password">
+      </div>
+
+      <button class="login-btn" id="btn-login" onclick="handleLogin()">
+        Ingresar al sistema
+      </button>
+
+      <div id="login-error" class="login-error" role="alert"></div>
+
+      <div class="login-hint">
+        <strong>Contraseña inicial:</strong> tu cédula + las primeras 4 letras
+        de tu apellido en minúscula.<br>
+        Ej: <strong>12345678lope</strong>
+      </div>
+
+      <div class="login-tourlat">
+        <div class="login-tourlat-logo">
+          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="login-tourlat-text">
+          Desarrollado por <a href="https://tourlat.com" target="_blank">Tourlat</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app">
+
+  <aside class="sidebar" role="navigation" aria-label="Menú principal">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div>
+        <div class="sidebar-brand-name">Alianza CRM</div>
+        <div class="sidebar-brand-sub">Sistema de gestión</div>
+      </div>
+      <div class="sidebar-brand-dev">tourlat</div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="sb-nombre">—</div>
+      <div class="sidebar-user-meta">
+        <span class="sidebar-user-dot"></span>
+        <span id="sb-rol">—</span>&nbsp;·&nbsp;<span id="sb-area">—</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Módulos"></nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()" aria-label="Cerrar sesión">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Cerrar sesión
+      </button>
+      <div class="sidebar-footer-dev">Desarrollado por Tourlat · tourlat.com</div>
+    </div>
+  </aside>
+
+  <main class="main" role="main">
+    <header class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="topbar-time" id="topbar-time" aria-live="polite"></div>
+        <div class="topbar-dev">tourlat.com</div>
+      </div>
+    </header>
+    <div class="page-content" id="page-content"></div>
+  </main>
+
+</div>
+
+<!-- SCRIPTS — orden obligatorio -->
+<script src="assets/js/api.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/dashboard.js"></script>
+
+<!-- Módulos por fase (descomentar al agregar) -->
+<!-- <script src="modules/funcionarios.js"></script> -->
+<!-- <script src="modules/proyectos.js"></script>    -->
+<!-- <script src="modules/clientes.js"></script>     -->
+<!-- <script src="modules/negocios.js"></script>     -->
+<!-- <script src="modules/gestiones.js"></script>    -->
+<!-- <script src="modules/tareas.js"></script>       -->
+<!-- <script src="modules/eventos.js"></script>      -->
+<!-- <script src="modules/director.js"></script>     -->
+<!-- <script src="modules/config.js"></script>       -->
+
+<script>
+  document.getElementById('inp-cedula').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('inp-pass').focus();
+  });
+  document.getElementById('inp-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleLogin();
+  });
+</script>
+</body>
+</html>
