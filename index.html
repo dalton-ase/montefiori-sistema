@@ -87,9 +87,39 @@
 
       <div class="login-input-group">
         <label class="login-label" for="inp-pass">Contraseña</label>
-        <input type="password" id="inp-pass" class="login-input"
-               placeholder="Contraseña"
-               autocomplete="current-password">
+        <div style="position:relative">
+          <input type="password" id="inp-pass" class="login-input"
+                 placeholder="Contraseña"
+                 autocomplete="current-password"
+                 style="padding-right:44px">
+          <button type="button" id="btn-toggle-pass"
+                  onclick="togglePassword()"
+                  style="position:absolute;right:13px;top:50%;transform:translateY(-50%);
+                         background:none;border:none;cursor:pointer;padding:0;
+                         display:flex;align-items:center;justify-content:center;
+                         color:rgba(255,255,255,0.4);transition:color .18s ease"
+                  onmouseover="this.style.color='rgba(255,255,255,0.8)'"
+                  onmouseout="this.style.color='rgba(255,255,255,0.4)'"
+                  title="Mostrar / ocultar contraseña"
+                  aria-label="Mostrar contraseña">
+            <!-- Ojo cerrado (estado inicial: password oculta) -->
+            <svg id="icon-eye-off" width="18" height="18" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+            <!-- Ojo abierto (cuando se muestra la contraseña) -->
+            <svg id="icon-eye" width="18" height="18" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 style="display:none">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <button class="login-btn" id="btn-login" onclick="handleLogin()">
@@ -143,7 +173,8 @@
 
     <div class="sidebar-footer">
       <button class="btn-logout" onclick="logout()" aria-label="Cerrar sesión">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
           <line x1="21" y1="12" x2="9" y2="12"/>
@@ -172,18 +203,32 @@
 <script src="assets/js/app.js"></script>
 <script src="assets/js/dashboard.js"></script>
 
-<!-- Módulos por fase (descomentar al agregar) -->
+<!-- Módulos Fase 2 -->
 <script src="modules/funcionarios.js"></script>
-<!-- <script src="modules/proyectos.js"></script>    -->
-<!-- <script src="modules/clientes.js"></script>     -->
-<!-- <script src="modules/negocios.js"></script>     -->
-<!-- <script src="modules/gestiones.js"></script>    -->
-<!-- <script src="modules/tareas.js"></script>       -->
-<!-- <script src="modules/eventos.js"></script>      -->
-<!-- <script src="modules/director.js"></script>     -->
-<!-- <script src="modules/config.js"></script>       -->
+<script src="modules/proyectos.js"></script>
+<script src="modules/clientes.js"></script>
+
+<!-- Módulos Fase 3 y 4 (próximamente) -->
+<!-- <script src="modules/negocios.js"></script>   -->
+<!-- <script src="modules/gestiones.js"></script>  -->
+<!-- <script src="modules/tareas.js"></script>     -->
+<!-- <script src="modules/eventos.js"></script>    -->
+<!-- <script src="modules/director.js"></script>   -->
+<!-- <script src="modules/config.js"></script>     -->
 
 <script>
+  /* Ojo de contraseña */
+  function togglePassword() {
+    const inp     = document.getElementById('inp-pass');
+    const eyeOff  = document.getElementById('icon-eye-off');
+    const eyeOn   = document.getElementById('icon-eye');
+    const visible = inp.type === 'text';
+    inp.type          = visible ? 'password' : 'text';
+    eyeOff.style.display = visible ? ''     : 'none';
+    eyeOn.style.display  = visible ? 'none' : '';
+  }
+
+  /* Enter en login */
   document.getElementById('inp-cedula').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('inp-pass').focus();
   });
