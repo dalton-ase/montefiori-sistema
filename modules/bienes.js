@@ -697,7 +697,8 @@ function bien_renderDetalle() {
 
     <!-- Tabs detalle -->
     <div class="tabs anim-2" style="margin-bottom:16px">
-      <button class="tab-btn active" onclick="bien_tabDetalle('docs')">📄 Documentos <span class="nav-badge" style="margin-left:6px">${(b.documentos||[]).length}</span></button>
+      <button class="tab-btn active" onclick="bien_tabDetalle('docurls')">📋 Documentación</button>
+      <button class="tab-btn" onclick="bien_tabDetalle('docs')">📄 Documentos <span class="nav-badge" style="margin-left:6px">${(b.documentos||[]).length}</span></button>
       <button class="tab-btn" onclick="bien_tabDetalle('mant')">🔧 Mantenimiento <span class="nav-badge" style="margin-left:6px">${(b.mantenimientos||[]).length}</span></button>
       <button class="tab-btn" onclick="bien_tabDetalle('equipo')">👥 Equipo <span class="nav-badge" style="margin-left:6px">${(b.participantes||[]).length}</span></button>
       <button class="tab-btn" onclick="bien_tabDetalle('media')">🖼️ Multimedia</button>
@@ -709,20 +710,164 @@ function bien_renderDetalle() {
     ${bien_modalMantHTML()}
     ${bien_modalPartHTML()}`;
 
-  bien_tabDetalle('docs');
+  bien_tabDetalle('docurls');
 }
 
 function bien_tabDetalle(tab) {
   document.querySelectorAll('.tabs .tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', ['docs','mant','equipo','media'][i] === tab);
+    btn.classList.toggle('active', ['docurls','docs','mant','equipo','media'][i] === tab);
   });
-  if (tab === 'docs')   bien_renderDocs();
-  if (tab === 'mant')   bien_renderMant();
-  if (tab === 'equipo') bien_renderEquipo();
-  if (tab === 'media')  bien_renderMedia();
+  if (tab === 'docurls') bien_renderDocUrls();
+  if (tab === 'docs')    bien_renderDocs();
+  if (tab === 'mant')    bien_renderMant();
+  if (tab === 'equipo')  bien_renderEquipo();
+  if (tab === 'media')   bien_renderMedia();
 }
 
-// ── DOCUMENTOS ──────────────────────────────────────────
+// ── DOCUMENTACIÓN (URLs directas) ───────────────────────
+
+function bien_parseDocumentacion(b) {
+  try { return JSON.parse(b.documentacion || '{}'); } catch(e) { return {}; }
+}
+
+function bien_renderDocUrls() {
+  const cont = document.getElementById('bien-detalle-contenido');
+  const docs = bien_parseDocumentacion(BIEN_DETAIL);
+  const extras = docs.extras || [{},{},{},{}];
+  while (extras.length < 4) extras.push({});
+
+  const DOCS_FIJOS = [
+    { key: 'compraventa', label: 'Contrato de compraventa', icon: '📝' },
+    { key: 'escritura',   label: 'Escritura pública',       icon: '📜' },
+    { key: 'libertad',    label: 'Certificado de libertad y tradición', icon: '🏛️' },
+    { key: 'impuestos',   label: 'Pago de impuestos',       icon: '💰' }
+  ];
+
+  function docRow(label, url, icon, editable) {
+    const tiene = url && url.trim();
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--gris-borde)">
+        <div style="font-size:1.2rem;width:28px;text-align:center">${icon || '📎'}</div>
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:${editable ? '400' : '600'};color:var(--oscuro)">${label || 'Sin etiqueta'}</div>
+          ${tiene
+            ? `<a href="${url}" target="_blank" style="font-size:var(--text-xs);color:var(--azul);text-decoration:none;word-break:break-all">Ver documento ↗</a>`
+            : `<span style="font-size:var(--text-xs);color:var(--gris-mid)">No registrado</span>`}
+        </div>
+        <div style="width:24px;text-align:center">
+          ${tiene
+            ? '<span style="color:var(--exito);font-size:16px">✓</span>'
+            : '<span style="color:var(--gris-mid);font-size:16px">○</span>'}
+        </div>
+      </div>`;
+  }
+
+  cont.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Documentación del bien</div>
+        <button class="btn btn-primary btn-sm" onclick="bien_editarDocUrls()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Editar documentación
+        </button>
+      </div>
+      <div class="card-body" style="padding:0">
+        ${DOCS_FIJOS.map(d => docRow(d.label, docs[d.key], d.icon, false)).join('')}
+        ${extras.map((ex, i) => ex.label ? docRow(ex.label, ex.url, '📎', true) : '').join('')}
+        ${!extras.some(ex => ex.label) ? '' : ''}
+      </div>
+    </div>
+
+    <!-- Modal editar documentación -->
+    <div class="modal-backdrop" id="docurls-modal">
+      <div class="modal" style="max-width:600px">
+        <div class="modal-header">
+          <div class="modal-title">Editar documentación</div>
+          <button class="modal-close" onclick="document.getElementById('docurls-modal').classList.remove('active')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+          <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-bottom:14px">Pega la URL de Google Drive de cada documento. Los campos personalizados te permiten agregar documentos adicionales.</div>
+
+          <div style="font-weight:700;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--navy);margin-bottom:8px">Documentos requeridos</div>
+          ${DOCS_FIJOS.map(d => `
+          <div class="form-group">
+            <label class="form-label">${d.icon} ${d.label}</label>
+            <input type="url" class="form-control" id="docurl-${d.key}" value="${docs[d.key] || ''}" placeholder="https://drive.google.com/...">
+          </div>`).join('')}
+
+          <div style="font-weight:700;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--navy);margin:16px 0 8px">Documentos adicionales</div>
+          ${[0,1,2,3].map(i => `
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px">
+            <input type="text" class="form-control" id="docurl-extra-label-${i}" value="${extras[i].label || ''}" placeholder="Nombre del documento" style="font-size:var(--text-xs)">
+            <input type="url" class="form-control" id="docurl-extra-url-${i}" value="${extras[i].url || ''}" placeholder="https://drive.google.com/..." style="font-size:var(--text-xs)">
+          </div>`).join('')}
+
+          <div id="docurls-error" style="display:none;padding:10px 12px;background:var(--peligro-light);border:1px solid var(--peligro-borde);border-radius:var(--r);color:var(--peligro);font-size:var(--text-sm);margin-top:8px"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('docurls-modal').classList.remove('active')">Cancelar</button>
+          <button class="btn btn-primary" id="docurls-btn" onclick="bien_guardarDocUrls()">Guardar documentación</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bien_editarDocUrls() {
+  document.getElementById('docurls-modal').classList.add('active');
+}
+
+async function bien_guardarDocUrls() {
+  const KEYS = ['compraventa','escritura','libertad','impuestos'];
+  const docData = {};
+  KEYS.forEach(k => {
+    const val = document.getElementById('docurl-' + k).value.trim();
+    if (val) docData[k] = val;
+  });
+
+  docData.extras = [];
+  for (let i = 0; i < 4; i++) {
+    const label = document.getElementById('docurl-extra-label-' + i).value.trim();
+    const url   = document.getElementById('docurl-extra-url-' + i).value.trim();
+    if (label || url) docData.extras.push({ label, url });
+  }
+
+  const btn = document.getElementById('docurls-btn');
+  const errEl = document.getElementById('docurls-error');
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  try {
+    const res = await apiSaveBien({
+      BIEN_ADM_ID: BIEN_DETAIL.BIEN_ADM_ID,
+      tipo_bien: BIEN_DETAIL.tipo_bien,
+      identificador: BIEN_DETAIL.identificador,
+      propietario_nombre: BIEN_DETAIL.propietario_nombre,
+      modalidad: BIEN_DETAIL.modalidad,
+      estado: BIEN_DETAIL.estado,
+      documentacion: JSON.stringify(docData)
+    });
+    if (res.ok) {
+      toast('Documentación guardada', 'ok');
+      document.getElementById('docurls-modal').classList.remove('active');
+      await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID);
+    } else {
+      errEl.textContent = res.error || 'Error';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false; btn.textContent = 'Guardar documentación';
+}
+
+// ── DOCUMENTOS (CRUD formal) ────────────────────────────
 
 function bien_renderDocs() {
   const cont = document.getElementById('bien-detalle-contenido');
@@ -1161,7 +1306,7 @@ function bien_renderMedia() {
           </div>` : `
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
           ${fotos.map((url, i) => `
-            <div style="aspect-ratio:4/3;border-radius:var(--r);overflow:hidden;border:1px solid var(--gris-borde);cursor:pointer;background:var(--gris-surface)" onclick="bien_verFoto('${driveImageUrl(url)}')">
+            <div style="aspect-ratio:4/3;border-radius:var(--r);overflow:hidden;border:1px solid var(--gris-borde);cursor:pointer;background:var(--gris-surface)" onclick="bien_verFoto('${driveImageUrl(url)}', ${i})">
               <img src="${driveImageUrl(url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;color:var(--gris-mid);font-size:var(--text-xs)>Error cargando foto ${i+1}</div>'">
             </div>`).join('')}
         </div>`}
@@ -1206,12 +1351,55 @@ function youtubeEmbedUrl(url) {
   return url;
 }
 
-/** Abre foto en modal lightbox */
-function bien_verFoto(url) {
+/** Abre foto en modal lightbox con navegación */
+function bien_verFoto(url, index) {
+  const fotos = (BIEN_DETAIL.galeria_fotos || '').split('|').filter(f => f.trim());
+  if (typeof index === 'undefined') index = fotos.findIndex(f => driveImageUrl(f) === url);
+  if (index < 0) index = 0;
+
+  let existente = document.getElementById('lightbox-overlay');
+  if (existente) existente.remove();
+
   const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:20px';
-  div.onclick = () => div.remove();
-  div.innerHTML = `<img src="${url}" style="max-width:95%;max-height:95%;object-fit:contain;border-radius:8px">`;
+  div.id = 'lightbox-overlay';
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  function renderLightbox(idx) {
+    const imgUrl = driveImageUrl(fotos[idx]);
+    div.innerHTML = `
+      <div style="position:absolute;top:16px;right:20px;display:flex;gap:12px;align-items:center">
+        <span style="color:rgba(255,255,255,0.6);font-size:14px">${idx + 1} / ${fotos.length}</span>
+        <button onclick="document.getElementById('lightbox-overlay').remove()" style="background:none;border:none;color:white;font-size:28px;cursor:pointer;padding:4px 10px">✕</button>
+      </div>
+      ${fotos.length > 1 ? `
+        <button onclick="bien_navFoto(-1)" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:white;font-size:32px;cursor:pointer;padding:8px 16px;border-radius:50%">‹</button>
+        <button onclick="bien_navFoto(1)" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:white;font-size:32px;cursor:pointer;padding:8px 16px;border-radius:50%">›</button>
+      ` : ''}
+      <img src="${imgUrl}" style="max-width:90%;max-height:85%;object-fit:contain;border-radius:8px" onerror="this.outerHTML='<div style=color:white;font-size:14px>Error cargando imagen</div>'">`;
+  }
+
+  window._lightboxIndex = index;
+  window._lightboxFotos = fotos;
+  window.bien_navFoto = function(dir) {
+    window._lightboxIndex = (window._lightboxIndex + dir + fotos.length) % fotos.length;
+    renderLightbox(window._lightboxIndex);
+  };
+
+  renderLightbox(index);
+
+  div.addEventListener('click', function(e) {
+    if (e.target === div) div.remove();
+  });
+
+  // Navegación con teclado
+  function keyHandler(e) {
+    if (!document.getElementById('lightbox-overlay')) { document.removeEventListener('keydown', keyHandler); return; }
+    if (e.key === 'ArrowLeft') bien_navFoto(-1);
+    if (e.key === 'ArrowRight') bien_navFoto(1);
+    if (e.key === 'Escape') div.remove();
+  }
+  document.addEventListener('keydown', keyHandler);
+
   document.body.appendChild(div);
 }
 
