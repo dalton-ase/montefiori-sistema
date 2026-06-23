@@ -11,7 +11,7 @@
  * ============================================================
  */
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwXsrPR-gJmGYT83qUID8tLuowlKgjDV_-c9BOpmY4ULQEvpRzMoA_4UfxMMO_0Vth_ug/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxnuNGfai04WRTjbkHJ7SGZIsW1QmrpKjw6_jxE3LB-Z6ZVpOBe-tESamk86SR25ET1BA/exec';
 
 async function api(action, data = {}) {
   const body = { action, data };
@@ -71,6 +71,7 @@ async function apiSaveDocBien(data)                { return api('saveDocBien', d
 async function apiDeleteDocBien(DOC_BIEN_ID)       { return api('deleteDocBien', { DOC_BIEN_ID }); }
 
 /* ── Mantenimiento / Órdenes de trabajo ── */
+async function apiChangePassword(password_actual, password_nueva) { return api('changePassword', { password_actual, password_nueva }); }
 async function apiGetMantBien(filtros)             { return api('getMantBien', filtros || {}); }
 async function apiSaveMantBien(data)               { return api('saveMantBien', data); }
 async function apiAprobarMant(MANT_ID)             { return api('aprobarMant', { MANT_ID }); }
