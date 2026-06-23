@@ -321,9 +321,16 @@ function bien_modalHTML() {
                 <label class="form-label">Barrio / Sector</label>
                 <input type="text" class="form-control" id="bien-m-barrio" placeholder="Barrio o sector">
               </div>
+              <div class="form-group"></div>
+            </div>
+            <div class="form-row-2">
               <div class="form-group">
-                <label class="form-label">Área (m²)</label>
-                <input type="number" class="form-control" id="bien-m-area" placeholder="0" min="0">
+                <label class="form-label">Área terreno (m²)</label>
+                <input type="number" class="form-control" id="bien-m-area-terreno" placeholder="0" min="0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Área construida (m²)</label>
+                <input type="number" class="form-control" id="bien-m-area-construida" placeholder="0" min="0">
               </div>
             </div>
             <div class="form-group">
@@ -426,7 +433,8 @@ function bien_abrirModal(BIEN_ID = null) {
   document.getElementById('bien-m-direccion').value = '';
   document.getElementById('bien-m-municipio').value = '';
   document.getElementById('bien-m-barrio').value = '';
-  document.getElementById('bien-m-area').value = '';
+  document.getElementById('bien-m-area-terreno').value = '';
+  document.getElementById('bien-m-area-construida').value = '';
   document.getElementById('bien-m-fecha-recepcion').value = '';
   document.getElementById('bien-m-drive').value = '';
   document.getElementById('bien-m-prop-nombre').value = '';
@@ -455,7 +463,8 @@ function bien_abrirModal(BIEN_ID = null) {
       document.getElementById('bien-m-direccion').value       = b.direccion || '';
       document.getElementById('bien-m-municipio').value       = b.municipio || '';
       document.getElementById('bien-m-barrio').value          = b.barrio || '';
-      document.getElementById('bien-m-area').value            = b.area_m2 || '';
+      document.getElementById('bien-m-area-terreno').value     = b.area_terreno || '';
+      document.getElementById('bien-m-area-construida').value  = b.area_construida || '';
       document.getElementById('bien-m-fecha-recepcion').value = b.fecha_recepcion ? String(b.fecha_recepcion).split('T')[0] : '';
       document.getElementById('bien-m-drive').value           = b.url_carpeta_drive || '';
       document.getElementById('bien-m-prop-nombre').value     = b.propietario_nombre || '';
@@ -497,7 +506,8 @@ async function bien_guardar() {
     direccion:            document.getElementById('bien-m-direccion').value.trim(),
     municipio:            document.getElementById('bien-m-municipio').value,
     barrio:               document.getElementById('bien-m-barrio').value.trim(),
-    area_m2:              document.getElementById('bien-m-area').value || '',
+    area_terreno:         document.getElementById('bien-m-area-terreno').value || '',
+    area_construida:      document.getElementById('bien-m-area-construida').value || '',
     avaluo:               document.getElementById('bien-m-avaluo').value || '',
     precio_arriendo:      document.getElementById('bien-m-precio-arriendo').value || '',
     precio_venta:         document.getElementById('bien-m-precio-venta').value || '',
@@ -588,7 +598,8 @@ function bien_renderDetalle() {
         { label:'Avalúo', val: b.avaluo ? formatCOP(b.avaluo) : '—' },
         { label:'Arriendo', val: b.precio_arriendo ? formatCOP(b.precio_arriendo) + '/mes' : '—' },
         { label:'Venta', val: b.precio_venta ? formatCOP(b.precio_venta) : '—' },
-        { label:'Área', val: b.area_m2 ? b.area_m2 + ' m²' : '—' },
+        { label:'Terreno', val: b.area_terreno ? b.area_terreno + ' m²' : '—' },
+        { label:'Construida', val: b.area_construida ? b.area_construida + ' m²' : '—' },
         { label:'Dirección', val: b.direccion || '—' },
         { label:'Recepción', val: formatFecha(b.fecha_recepcion) }
       ].map(i => `
