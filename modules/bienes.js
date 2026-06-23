@@ -441,7 +441,7 @@ function bien_modalHTML() {
               <input type="url" class="form-control" id="bien-m-video" placeholder="https://www.youtube.com/watch?v=...">
             </div>
             <div class="form-group">
-              <label class="form-label">🌐 Tour virtual (código embed Kuula u otro)</label>
+              <label class="form-label">🌐 Tour virtual </label>
               <textarea class="form-control" id="bien-m-tour" rows="3" placeholder='<iframe src="https://kuula.co/share/..." ...></iframe>'></textarea>
               <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:4px">Pega el código iframe completo que te da Kuula o la plataforma de tour virtual</div>
             </div>
