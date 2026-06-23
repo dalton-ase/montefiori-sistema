@@ -115,10 +115,13 @@ function bien_renderKPIs(dash) {
 function bien_cargarSelectores() {
   const cfg = APP.config || {};
 
-  const tipos = (cfg.tipo_bien || []).map(t => t.clave);
+  const tipos = (cfg.tipo_bien_adm || []).map(t => t.clave);
   const estados = (cfg.estado_bien || []).map(e => e.clave);
   const modalidades = (cfg.modalidad_admin || []).map(m => m.clave);
   const municipios = (cfg.municipio || []).map(m => m.clave);
+
+  // Guardar subtipos para uso en cascada
+  window.SUBTIPOS_BIEN = (cfg.subtipo_bien || []);
 
   // Filtros
   bien_llenarSelect('bien-filtro-tipo',      tipos,       'Todos los tipos');
@@ -130,6 +133,24 @@ function bien_cargarSelectores() {
   bien_llenarSelect('bien-m-estado',     estados,     'Selecciona estado');
   bien_llenarSelect('bien-m-modalidad',  modalidades, 'Selecciona modalidad');
   bien_llenarSelect('bien-m-municipio',  municipios,  'Selecciona municipio');
+}
+
+/** Filtra subtipos según el tipo seleccionado */
+function bien_actualizarSubtipos() {
+  const tipo = document.getElementById('bien-m-tipo')?.value || '';
+  const sel = document.getElementById('bien-m-subtipo');
+  if (!sel) return;
+
+  const subtipos = (window.SUBTIPOS_BIEN || []).filter(s => s.valor === tipo).map(s => s.clave);
+
+  if (subtipos.length === 0) {
+    sel.innerHTML = '<option value="">No aplica</option>';
+    sel.closest('.form-group').style.display = 'none';
+  } else {
+    sel.closest('.form-group').style.display = '';
+    sel.innerHTML = '<option value="">Selecciona subtipo</option>';
+    subtipos.forEach(s => { sel.innerHTML += `<option value="${s}">${s}</option>`; });
+  }
 }
 
 function bien_llenarSelect(id, opciones, placeholder) {
@@ -181,7 +202,7 @@ function bien_renderTabla(data) {
                 <div style="font-size:1.4rem">${TIPO_EMOJI[b.tipo_bien] || '📦'}</div>
                 <div>
                   <div style="font-weight:600;font-size:var(--text-sm);color:var(--oscuro)">${b.identificador}</div>
-                  <div style="font-size:var(--text-xs);color:var(--gris-mid)">${b.tipo_bien}</div>
+                  <div style="font-size:var(--text-xs);color:var(--gris-mid)">${b.tipo_bien}${b.subtipo_bien ? ' · ' + b.subtipo_bien : ''}</div>
                 </div>
               </div>
             </td>
@@ -264,11 +285,21 @@ function bien_modalHTML() {
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label req">Tipo de bien</label>
-                <select class="form-control" id="bien-m-tipo"></select>
+                <select class="form-control" id="bien-m-tipo" onchange="bien_actualizarSubtipos()"></select>
               </div>
+              <div class="form-group" id="bien-subtipo-wrap">
+                <label class="form-label">Subtipo</label>
+                <select class="form-control" id="bien-m-subtipo"><option value="">Selecciona tipo primero</option></select>
+              </div>
+            </div>
+            <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label req">Identificador</label>
                 <input type="text" class="form-control" id="bien-m-identificador" placeholder="Ej: Casa Lote 15 Le Mont">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fecha de recepción</label>
+                <input type="date" class="form-control" id="bien-m-fecha-recepcion">
               </div>
             </div>
             <div class="form-group">
@@ -296,8 +327,8 @@ function bien_modalHTML() {
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Fecha de recepción</label>
-              <input type="date" class="form-control" id="bien-m-fecha-recepcion">
+              <label class="form-label">📁 Carpeta Drive (documentos y soportes)</label>
+              <input type="url" class="form-control" id="bien-m-drive" placeholder="https://drive.google.com/drive/folders/...">
             </div>
           </div>
 
@@ -389,6 +420,7 @@ function bien_abrirModal(BIEN_ID = null) {
   document.getElementById('bien-modal-title').textContent = BIEN_ID ? 'Editar bien' : 'Nuevo bien';
   document.getElementById('bien-m-id').value = '';
   document.getElementById('bien-m-tipo').value = '';
+  document.getElementById('bien-m-subtipo').value = '';
   document.getElementById('bien-m-identificador').value = '';
   document.getElementById('bien-m-descripcion').value = '';
   document.getElementById('bien-m-direccion').value = '';
@@ -396,6 +428,7 @@ function bien_abrirModal(BIEN_ID = null) {
   document.getElementById('bien-m-barrio').value = '';
   document.getElementById('bien-m-area').value = '';
   document.getElementById('bien-m-fecha-recepcion').value = '';
+  document.getElementById('bien-m-drive').value = '';
   document.getElementById('bien-m-prop-nombre').value = '';
   document.getElementById('bien-m-prop-cedula').value = '';
   document.getElementById('bien-m-prop-telefono').value = '';
@@ -408,12 +441,15 @@ function bien_abrirModal(BIEN_ID = null) {
   document.getElementById('bien-m-observaciones').value = '';
   document.getElementById('bien-error').style.display = 'none';
   bien_tabModal('info');
+  bien_actualizarSubtipos();
 
   if (BIEN_ID) {
     const b = BIEN_DATA.find(x => x.BIEN_ADM_ID === BIEN_ID);
     if (b) {
       document.getElementById('bien-m-id').value              = b.BIEN_ADM_ID;
       document.getElementById('bien-m-tipo').value            = b.tipo_bien || '';
+      bien_actualizarSubtipos();
+      document.getElementById('bien-m-subtipo').value         = b.subtipo_bien || '';
       document.getElementById('bien-m-identificador').value   = b.identificador || '';
       document.getElementById('bien-m-descripcion').value     = b.descripcion || '';
       document.getElementById('bien-m-direccion').value       = b.direccion || '';
@@ -421,6 +457,7 @@ function bien_abrirModal(BIEN_ID = null) {
       document.getElementById('bien-m-barrio').value          = b.barrio || '';
       document.getElementById('bien-m-area').value            = b.area_m2 || '';
       document.getElementById('bien-m-fecha-recepcion').value = b.fecha_recepcion ? String(b.fecha_recepcion).split('T')[0] : '';
+      document.getElementById('bien-m-drive').value           = b.url_carpeta_drive || '';
       document.getElementById('bien-m-prop-nombre').value     = b.propietario_nombre || '';
       document.getElementById('bien-m-prop-cedula').value     = b.propietario_cedula || '';
       document.getElementById('bien-m-prop-telefono').value   = b.propietario_telefono || '';
@@ -448,6 +485,7 @@ async function bien_guardar() {
   const data = {
     BIEN_ADM_ID:              document.getElementById('bien-m-id').value || undefined,
     tipo_bien:            document.getElementById('bien-m-tipo').value,
+    subtipo_bien:         document.getElementById('bien-m-subtipo').value,
     identificador:        document.getElementById('bien-m-identificador').value.trim(),
     descripcion:          document.getElementById('bien-m-descripcion').value.trim(),
     propietario_nombre:   document.getElementById('bien-m-prop-nombre').value.trim(),
@@ -463,6 +501,7 @@ async function bien_guardar() {
     avaluo:               document.getElementById('bien-m-avaluo').value || '',
     precio_arriendo:      document.getElementById('bien-m-precio-arriendo').value || '',
     precio_venta:         document.getElementById('bien-m-precio-venta').value || '',
+    url_carpeta_drive:    document.getElementById('bien-m-drive').value.trim(),
     observaciones:        document.getElementById('bien-m-observaciones').value.trim(),
     fecha_recepcion:      document.getElementById('bien-m-fecha-recepcion').value
   };
@@ -532,7 +571,8 @@ function bien_renderDetalle() {
         <div>
           <h2 style="font-family:var(--font-display);font-size:1.35rem;font-weight:800;color:var(--oscuro);margin:0">${b.identificador}</h2>
           <div style="font-size:var(--text-sm);color:var(--gris-mid);margin-top:3px">
-            ${b.tipo_bien} · ${b.municipio || '—'} · Propietario: <strong>${b.propietario_nombre}</strong>
+            ${b.tipo_bien}${b.subtipo_bien ? ' · ' + b.subtipo_bien : ''} · ${b.municipio || '—'} · Propietario: <strong>${b.propietario_nombre}</strong>
+            ${b.url_carpeta_drive ? ` · <a href="${b.url_carpeta_drive}" target="_blank" style="color:var(--azul);text-decoration:none">📁 Ver carpeta Drive</a>` : ''}
           </div>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px">
@@ -757,7 +797,13 @@ async function bien_guardarDoc() {
   btn.disabled = false; btn.textContent = 'Guardar';
 }
 
-// ── MANTENIMIENTO ────────────────────────────────────────
+// ── ÓRDENES DE TRABAJO (MANTENIMIENTO) ──────────────────
+
+const MANT_ESTADO_BADGE = {
+  'Solicitado':'badge-gris','Aprobado':'badge-azul','Rechazado':'badge-peligro',
+  'En compra':'badge-morado','En ejecución':'badge-alerta','Completado':'badge-exito','Cancelado':'badge-gris'
+};
+const MANT_FLUJO = ['Solicitado','Aprobado','En compra','En ejecución','Completado'];
 
 function bien_renderMant() {
   const cont = document.getElementById('bien-detalle-contenido');
@@ -766,36 +812,79 @@ function bien_renderMant() {
   cont.innerHTML = `
     <div class="card">
       <div class="card-header">
-        <div class="card-title">Mantenimiento</div>
+        <div class="card-title">Órdenes de trabajo</div>
         <button class="btn btn-primary btn-sm" onclick="bien_abrirModalMant()">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Registrar mantenimiento
+          Nueva solicitud
         </button>
       </div>
       <div class="card-body" style="padding:0">
         ${!mants.length ? `
           <div class="empty-state" style="padding:30px">
-            <div class="empty-title">Sin mantenimientos</div>
-            <div class="empty-sub">Registra intervenciones preventivas, correctivas o mejoras</div>
-          </div>` : `
-        <table class="table">
-          <thead><tr><th>Tipo</th><th>Descripción</th><th>Costo</th><th>Responsable</th><th>Fecha prog.</th><th>Estado</th><th style="text-align:right">Acción</th></tr></thead>
-          <tbody>
-            ${mants.map(m => `<tr>
-              <td><span class="badge ${m.tipo_mantenimiento === 'Preventivo' ? 'badge-azul' : m.tipo_mantenimiento === 'Correctivo' ? 'badge-alerta' : 'badge-exito'}">${m.tipo_mantenimiento}</span></td>
-              <td style="font-size:var(--text-sm);max-width:200px">${m.descripcion}</td>
-              <td style="font-size:var(--text-sm);font-weight:600">${m.costo ? formatCOP(m.costo) : '—'}</td>
-              <td style="font-size:var(--text-sm)">${m.responsable_nombre || '—'}</td>
-              <td style="font-size:var(--text-sm)">${formatFecha(m.fecha_programada)}</td>
-              <td><span class="badge ${m.estado === 'Completado' ? 'badge-exito' : m.estado === 'En proceso' ? 'badge-azul' : 'badge-gris'}">${m.estado}</span></td>
-              <td><div class="table-actions">
-                <button class="btn btn-ghost btn-sm btn-icon" onclick="bien_abrirModalMant('${m.MANT_ID}')" title="Editar">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </button>
-              </div></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`}
+            <div class="empty-title">Sin órdenes de trabajo</div>
+            <div class="empty-sub">Crea una solicitud de mantenimiento, reparación o mejora</div>
+          </div>` :
+          mants.map(m => mant_renderCard(m)).join('')}
+      </div>
+    </div>`;
+}
+
+function mant_renderCard(m) {
+  const pasoActual = MANT_FLUJO.indexOf(m.estado);
+  const esTerminal = m.estado === 'Rechazado' || m.estado === 'Cancelado' || m.estado === 'Completado';
+
+  // Barra de progreso visual
+  const progreso = MANT_FLUJO.map((paso, i) => {
+    let clase = 'mant-step-pending';
+    if (i < pasoActual || m.estado === 'Completado') clase = 'mant-step-done';
+    else if (i === pasoActual && !esTerminal) clase = 'mant-step-active';
+    return `<div class="${clase}" style="flex:1;height:4px;border-radius:2px;background:${
+      clase === 'mant-step-done' ? 'var(--exito)' :
+      clase === 'mant-step-active' ? 'var(--azul)' : 'var(--gris-borde)'
+    }"></div>`;
+  }).join('');
+
+  // Botones de acción según estado
+  let acciones = '';
+  if (m.estado === 'Solicitado') {
+    acciones = `
+      <button class="btn btn-sm" style="background:var(--exito);color:white" onclick="mant_aprobar('${m.MANT_ID}')">✓ Aprobar</button>
+      <button class="btn btn-sm" style="background:var(--peligro);color:white" onclick="mant_rechazar('${m.MANT_ID}')">✗ Rechazar</button>`;
+  } else if (m.estado === 'Aprobado') {
+    acciones = `<button class="btn btn-sm btn-primary" onclick="mant_avanzar('${m.MANT_ID}','En compra')">→ Iniciar compras</button>
+                <button class="btn btn-sm btn-primary" onclick="mant_avanzar('${m.MANT_ID}','En ejecución')">→ Ir a ejecución</button>`;
+  } else if (m.estado === 'En compra') {
+    acciones = `<button class="btn btn-sm btn-primary" onclick="mant_avanzar('${m.MANT_ID}','En ejecución')">→ Iniciar ejecución</button>`;
+  } else if (m.estado === 'En ejecución') {
+    acciones = `<button class="btn btn-sm" style="background:var(--exito);color:white" onclick="mant_completar('${m.MANT_ID}')">✓ Completar</button>`;
+  }
+
+  return `
+    <div style="padding:16px;border-bottom:1px solid var(--gris-borde)">
+      <div style="display:flex;align-items:start;gap:12px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span class="badge ${m.tipo_mantenimiento === 'Preventivo' ? 'badge-azul' : m.tipo_mantenimiento === 'Correctivo' ? 'badge-alerta' : 'badge-exito'}">${m.tipo_mantenimiento}</span>
+            <span class="badge ${MANT_ESTADO_BADGE[m.estado] || 'badge-gris'}">${m.estado}</span>
+            ${m.prioridad === 'Alta' ? '<span class="badge badge-peligro">⚡ Alta</span>' : ''}
+          </div>
+          <div style="font-weight:600;font-size:var(--text-sm);color:var(--oscuro)">${m.descripcion}</div>
+          <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:4px">
+            Solicitado por ${m.solicitado_por_nombre || '—'} · ${formatFecha(m.fecha_solicitud)}
+            ${m.aprobado_por_nombre ? ' · Aprobado por ' + m.aprobado_por_nombre : ''}
+            ${m.motivo_rechazo ? ' · <span style="color:var(--peligro)">Motivo: ' + m.motivo_rechazo + '</span>' : ''}
+          </div>
+        </div>
+        <div style="text-align:right;min-width:120px">
+          <div style="font-size:var(--text-xs);color:var(--gris-mid)">Estimado</div>
+          <div style="font-weight:700;font-size:var(--text-sm)">${m.costo_estimado ? formatCOP(m.costo_estimado) : '—'}</div>
+          ${m.costo_real ? `<div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:2px">Real: <strong>${formatCOP(m.costo_real)}</strong></div>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:10px">${progreso}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        ${acciones}
+        <button class="btn btn-ghost btn-sm" onclick="bien_abrirModalMant('${m.MANT_ID}')" style="margin-left:auto">Editar</button>
       </div>
     </div>`;
 }
@@ -807,7 +896,7 @@ function bien_modalMantHTML() {
     <div class="modal-backdrop" id="mant-modal">
       <div class="modal" style="max-width:560px">
         <div class="modal-header">
-          <div class="modal-title" id="mant-modal-title">Registrar mantenimiento</div>
+          <div class="modal-title" id="mant-modal-title">Nueva solicitud</div>
           <button class="modal-close" onclick="document.getElementById('mant-modal').classList.remove('active')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -823,45 +912,27 @@ function bien_modalMantHTML() {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Costo</label>
-              <input type="number" class="form-control" id="mant-costo" placeholder="0" min="0">
+              <label class="form-label">Prioridad</label>
+              <select class="form-control" id="mant-prioridad">
+                <option value="Media">Media</option>
+                <option value="Alta">Alta</option>
+                <option value="Baja">Baja</option>
+              </select>
             </div>
           </div>
           <div class="form-group">
             <label class="form-label req">Descripción</label>
-            <textarea class="form-control" id="mant-desc" rows="2" placeholder="¿Qué se va a hacer?"></textarea>
+            <textarea class="form-control" id="mant-desc" rows="3" placeholder="¿Qué se necesita hacer y por qué?"></textarea>
           </div>
           <div class="form-row-2">
             <div class="form-group">
-              <label class="form-label">Responsable</label>
-              <select class="form-control" id="mant-responsable">
-                <option value="">Selecciona</option>
-                ${BIEN_FUNC.map(f => `<option value="${f.FUNC_ID}" data-nombre="${f.nombre} ${f.apellido}">${f.nombre} ${f.apellido}</option>`).join('')}
-              </select>
+              <label class="form-label">Costo estimado</label>
+              <input type="number" class="form-control" id="mant-costo" placeholder="0" min="0">
             </div>
             <div class="form-group">
-              <label class="form-label">Estado</label>
-              <select class="form-control" id="mant-estado">
-                <option value="Programado">Programado</option>
-                <option value="En proceso">En proceso</option>
-                <option value="Completado">Completado</option>
-                <option value="Cancelado">Cancelado</option>
-              </select>
+              <label class="form-label">Evidencia (URL)</label>
+              <input type="url" class="form-control" id="mant-evidencia" placeholder="https://drive.google.com/...">
             </div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label">Fecha programada</label>
-              <input type="date" class="form-control" id="mant-fecha-prog">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Fecha ejecución</label>
-              <input type="date" class="form-control" id="mant-fecha-ejec">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Evidencia (URL foto/video)</label>
-            <input type="url" class="form-control" id="mant-evidencia" placeholder="https://drive.google.com/...">
           </div>
           <div class="form-group">
             <label class="form-label">Observaciones</label>
@@ -871,39 +942,35 @@ function bien_modalMantHTML() {
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="document.getElementById('mant-modal').classList.remove('active')">Cancelar</button>
-          <button class="btn btn-primary" id="mant-btn-guardar" onclick="bien_guardarMant()">Guardar</button>
+          <button class="btn btn-primary" id="mant-btn-guardar" onclick="bien_guardarMant()">Crear solicitud</button>
         </div>
       </div>
     </div>`;
 }
 
 function bien_abrirModalMant(MANT_ID = null) {
-  document.getElementById('mant-modal-title').textContent = MANT_ID ? 'Editar mantenimiento' : 'Registrar mantenimiento';
+  document.getElementById('mant-modal-title').textContent = MANT_ID ? 'Editar orden' : 'Nueva solicitud';
   document.getElementById('mant-id').value = '';
   document.getElementById('mant-tipo').value = '';
-  document.getElementById('mant-costo').value = '';
+  document.getElementById('mant-prioridad').value = 'Media';
   document.getElementById('mant-desc').value = '';
-  document.getElementById('mant-responsable').value = '';
-  document.getElementById('mant-estado').value = 'Programado';
-  document.getElementById('mant-fecha-prog').value = '';
-  document.getElementById('mant-fecha-ejec').value = '';
+  document.getElementById('mant-costo').value = '';
   document.getElementById('mant-evidencia').value = '';
   document.getElementById('mant-obs').value = '';
   document.getElementById('mant-error').style.display = 'none';
+  document.getElementById('mant-btn-guardar').textContent = 'Crear solicitud';
 
   if (MANT_ID) {
     const m = (BIEN_DETAIL.mantenimientos || []).find(x => x.MANT_ID === MANT_ID);
     if (m) {
-      document.getElementById('mant-id').value          = m.MANT_ID;
-      document.getElementById('mant-tipo').value         = m.tipo_mantenimiento || '';
-      document.getElementById('mant-costo').value        = m.costo || '';
-      document.getElementById('mant-desc').value         = m.descripcion || '';
-      document.getElementById('mant-responsable').value  = m.responsable_id || '';
-      document.getElementById('mant-estado').value       = m.estado || 'Programado';
-      document.getElementById('mant-fecha-prog').value   = m.fecha_programada ? String(m.fecha_programada).split('T')[0] : '';
-      document.getElementById('mant-fecha-ejec').value   = m.fecha_ejecucion ? String(m.fecha_ejecucion).split('T')[0] : '';
-      document.getElementById('mant-evidencia').value    = m.evidencia_url || '';
-      document.getElementById('mant-obs').value          = m.observaciones || '';
+      document.getElementById('mant-id').value       = m.MANT_ID;
+      document.getElementById('mant-tipo').value      = m.tipo_mantenimiento || '';
+      document.getElementById('mant-prioridad').value = m.prioridad || 'Media';
+      document.getElementById('mant-desc').value      = m.descripcion || '';
+      document.getElementById('mant-costo').value     = m.costo_estimado || '';
+      document.getElementById('mant-evidencia').value = m.evidencia_url || '';
+      document.getElementById('mant-obs').value       = m.observaciones || '';
+      document.getElementById('mant-btn-guardar').textContent = 'Guardar cambios';
     }
   }
   document.getElementById('mant-modal').classList.add('active');
@@ -912,18 +979,14 @@ function bien_abrirModalMant(MANT_ID = null) {
 async function bien_guardarMant() {
   const errEl = document.getElementById('mant-error');
   errEl.style.display = 'none';
-  const selResp = document.getElementById('mant-responsable');
   const data = {
     MANT_ID:             document.getElementById('mant-id').value || undefined,
-    BIEN_ADM_ID:             BIEN_DETAIL.BIEN_ADM_ID,
+    entidad_tipo:        'bien',
+    entidad_id:          BIEN_DETAIL.BIEN_ADM_ID,
     tipo_mantenimiento:  document.getElementById('mant-tipo').value,
     descripcion:         document.getElementById('mant-desc').value.trim(),
-    costo:               document.getElementById('mant-costo').value || 0,
-    responsable_id:      selResp.value,
-    responsable_nombre:  selResp.selectedOptions[0]?.dataset.nombre || '',
-    fecha_programada:    document.getElementById('mant-fecha-prog').value,
-    fecha_ejecucion:     document.getElementById('mant-fecha-ejec').value,
-    estado:              document.getElementById('mant-estado').value,
+    prioridad:           document.getElementById('mant-prioridad').value,
+    costo_estimado:      document.getElementById('mant-costo').value || 0,
     observaciones:       document.getElementById('mant-obs').value.trim(),
     evidencia_url:       document.getElementById('mant-evidencia').value.trim()
   };
@@ -934,13 +997,50 @@ async function bien_guardarMant() {
   try {
     const res = await apiSaveMantBien(data);
     if (res.ok) {
-      toast('Mantenimiento guardado', 'ok');
+      toast(data.MANT_ID ? 'Orden actualizada' : 'Solicitud creada', 'ok');
       document.getElementById('mant-modal').classList.remove('active');
       await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID);
     } else { errEl.textContent = res.error || 'Error'; errEl.style.display = 'block'; }
   } catch(e) { errEl.textContent = 'Error de conexión'; errEl.style.display = 'block'; }
   btn.disabled = false; btn.textContent = 'Guardar';
 }
+
+// ── Acciones del flujo ──
+async function mant_aprobar(MANT_ID) {
+  if (!confirm('¿Aprobar esta orden de trabajo?')) return;
+  try {
+    const res = await apiAprobarMant(MANT_ID);
+    if (res.ok) { toast('Orden aprobada', 'ok'); await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID); }
+    else toast(res.error || 'Error', 'error');
+  } catch(e) { toast('Error de conexión', 'error'); }
+}
+
+async function mant_rechazar(MANT_ID) {
+  const motivo = prompt('Motivo del rechazo:');
+  if (!motivo) return;
+  try {
+    const res = await apiRechazarMant(MANT_ID, motivo);
+    if (res.ok) { toast('Orden rechazada', 'ok'); await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID); }
+    else toast(res.error || 'Error', 'error');
+  } catch(e) { toast('Error de conexión', 'error'); }
+}
+
+async function mant_avanzar(MANT_ID, nuevoEstado) {
+  if (!confirm('¿Avanzar la orden a "' + nuevoEstado + '"?')) return;
+  try {
+    const res = await apiAvanzarMant(MANT_ID, nuevoEstado);
+    if (res.ok) { toast('Orden avanzada', 'ok'); await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID); }
+    else toast(res.error || 'Error', 'error');
+  } catch(e) { toast('Error de conexión', 'error'); }
+}
+
+async function mant_completar(MANT_ID) {
+  const evidencia = prompt('URL de evidencia (foto/video del trabajo terminado):');
+  try {
+    const res = await apiAvanzarMant(MANT_ID, 'Completado', evidencia || '');
+    if (res.ok) { toast('Orden completada', 'ok'); await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID); }
+    else toast(res.error || 'Error', 'error');
+  } catch(e) { toast('Error de conexión', 'error'); }
 
 // ── EQUIPO (PARTICIPANTES) ──────────────────────────────
 
