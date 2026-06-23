@@ -7,7 +7,7 @@
  * ============================================================
  */
 
-const APP = { token:null, user:null, config:null, dashboard:null, paginaActual:null };
+const APP = { token:null, user:null, config:null, dashboard:null, paginaActual:null, permisos:{} };
 
 /* LOADER */
 function showLoader(txt='CARGANDO') {
@@ -43,8 +43,8 @@ function formatFechaHora(f) { if(!f) return '—'; return new Date(f).toLocaleSt
 function diasDesde(f)   { if(!f) return '—'; const d=Math.floor((new Date()-new Date(f))/86400000); return d===0?'Hoy':d===1?'Ayer':`Hace ${d}d`; }
 function pipelineBadge(e) { const c=(e||'').replace(/ /g,'-'); return `<span class="badge pip-${c}">${e||'—'}</span>`; }
 
-/* PERMISOS */
-const ACCESO = {
+/* PERMISOS — Sistema dinámico con fallback por área */
+const ACCESO_LEGACY = {
   clientes:     { areas: null },
   negocios:     { areas: ['Comercial','Juridica','Cartera','Gerencia'] },
   gestiones:    { areas: null },
@@ -53,16 +53,33 @@ const ACCESO = {
   proyectos:    { areas: ['Comercial','Obra','Gerencia'] },
   funcionarios: { areas: ['TH','Gerencia'] },
   director:     { areas: ['Gerencia'] },
-  config:       { areas: ['Gerencia'] }
+  config:       { areas: ['Gerencia'] },
+  bienes:       { areas: ['Administracion','Gerencia'] },
+  mantenimiento:{ areas: ['Administracion','Obra','Gerencia'] },
+  permisos:     { areas: ['Gerencia'] }
 };
 
 function puedeAcceder(modulo) {
   if (!APP.user) return false;
   if (APP.user.rol === 'Director') return true;
-  const cfg = ACCESO[modulo];
+
+  // 1. Si hay permisos dinámicos, usarlos
+  if (APP.permisos && Object.keys(APP.permisos).length > 0) {
+    return !!APP.permisos[modulo];
+  }
+
+  // 2. Fallback: lógica por área (legacy)
+  const cfg = ACCESO_LEGACY[modulo];
   if (!cfg) return false;
   if (!cfg.areas) return true;
   return cfg.areas.includes(APP.user.area);
+}
+
+function nivelAcceso(modulo) {
+  if (!APP.user) return null;
+  if (APP.user.rol === 'Director') return 'admin';
+  if (APP.permisos && APP.permisos[modulo]) return APP.permisos[modulo];
+  return puedeAcceder(modulo) ? 'editar' : null;
 }
 
 /* NAV */
@@ -76,8 +93,13 @@ const NAV_DEF = [
     { id:'eventos',     label:'Eventos especiales',  icon:'alert-circle' }
   ]},
   { grupo:'Inventario',     items:[{ id:'proyectos',    label:'Proyectos y Lotes',   icon:'map-pin'      }] },
+  { grupo:'Bienes',         items:[
+    { id:'bienes',        label:'Bienes administrados', icon:'briefcase'    },
+    { id:'mantenimiento', label:'Mantenimiento',         icon:'tool'         }
+  ]},
   { grupo:'Administración', items:[
     { id:'funcionarios',label:'Funcionarios',         icon:'user'         },
+    { id:'permisos',    label:'Permisos',              icon:'shield'       },
     { id:'director',    label:'Panel Gerencial',       icon:'bar-chart-2'  },
     { id:'config',      label:'Configuración',         icon:'settings'     }
   ]}
@@ -93,7 +115,10 @@ const ICONS = {
   'map-pin':      `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`,
   'user':         `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
   'bar-chart-2':  `<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>`,
-  'settings':     `<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/>`
+  'settings':     `<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/>`,
+  'briefcase':    `<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>`,
+  'tool':         `<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>`,
+  'shield':       `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>`
 };
 
 function navIcon(id) {
@@ -136,7 +161,8 @@ const PAGE_TITLES = {
   dashboard:'Dashboard', clientes:'Clientes', negocios:'Negocios',
   gestiones:'Gestiones', tareas:'Tareas', eventos:'Eventos especiales',
   proyectos:'Proyectos y Lotes', funcionarios:'Funcionarios',
-  director:'Panel Gerencial', config:'Configuración'
+  bienes:'Bienes administrados', mantenimiento:'Mantenimiento',
+  permisos:'Permisos', director:'Panel Gerencial', config:'Configuración'
 };
 
 function navigateTo(pagina) {
@@ -180,8 +206,10 @@ async function handleLogin() {
     const res = await apiLogin(cedula, pass);
     if (res.ok) {
       APP.token = res.token; APP.user = res.user;
+      APP.permisos = res.permisos || {};
       sessionStorage.setItem('crm_token', res.token);
       sessionStorage.setItem('crm_user', JSON.stringify(res.user));
+      sessionStorage.setItem('crm_permisos', JSON.stringify(APP.permisos));
       await iniciarApp();
     } else {
       errEl.textContent = res.error || 'Credenciales incorrectas.';
@@ -208,7 +236,7 @@ async function iniciarApp() {
 }
 
 function logout() {
-  APP.token = null; APP.user = null;
+  APP.token = null; APP.user = null; APP.permisos = {};
   sessionStorage.clear();
   document.getElementById('app').style.display          = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -222,9 +250,11 @@ function logout() {
 (async function() {
   const t = sessionStorage.getItem('crm_token');
   const u = sessionStorage.getItem('crm_user');
+  const p = sessionStorage.getItem('crm_permisos');
   if (t && u) {
     try {
       APP.token = t; APP.user = JSON.parse(u);
+      APP.permisos = p ? JSON.parse(p) : {};
       showLoader('RESTAURANDO SESIÓN');
       await iniciarApp();
     } catch(e) { sessionStorage.clear(); hideLoader(); }

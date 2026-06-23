@@ -46,3 +46,30 @@ async function apiGetCliente(CLI_ID)               { return api('getCliente', { 
 async function apiSaveCliente(data)                { return api('saveCliente', data); }
 async function apiImportarClientes(clientes)       { return api('importarClientes', { clientes }); }
 async function apiGetLog(filtros)                  { return api('getLog', filtros || {}); }
+
+/* ── Permisos por usuario ── */
+async function apiGetModulos()                     { return api('getModulos'); }
+async function apiGetPermisos()                    { return api('getPermisosUsrAll'); }
+async function apiGetPermisosUsuario(FUNC_ID)      { return api('getPermisosUsr', { FUNC_ID }); }
+async function apiSavePermisosBulk(FUNC_ID, permisos) { return api('savePermisosBulk', { FUNC_ID, permisos }); }
+
+/* ── Participantes ── */
+async function apiGetParticipantes(filtros)        { return api('getParticipantes', filtros || {}); }
+async function apiSaveParticipante(data)           { return api('saveParticipante', data); }
+async function apiDeleteParticipante(PART_ID)      { return api('deleteParticipante', { PART_ID }); }
+
+/* ── Bienes administrados ── */
+async function apiGetBienes(filtros)               { return api('getBienesAdm', filtros || {}); }
+async function apiGetBien(BIEN_ADM_ID)             { return api('getBienAdm', { BIEN_ADM_ID }); }
+async function apiSaveBien(data)                   { return api('saveBienAdm', data); }
+async function apiToggleBien(BIEN_ADM_ID)          { return api('toggleBienAdm', { BIEN_ADM_ID }); }
+async function apiGetDashboardBienes()             { return api('getDashboardBienes'); }
+
+/* ── Documentos de bien ── */
+async function apiGetDocsBien(BIEN_ADM_ID)         { return api('getDocsBien', { BIEN_ADM_ID }); }
+async function apiSaveDocBien(data)                { return api('saveDocBien', data); }
+async function apiDeleteDocBien(DOC_BIEN_ID)       { return api('deleteDocBien', { DOC_BIEN_ID }); }
+
+/* ── Mantenimiento de bien ── */
+async function apiGetMantBien(BIEN_ADM_ID)         { return api('getMantBien', { BIEN_ADM_ID }); }
+async function apiSaveMantBien(data)               { return api('saveMantBien', data); }
