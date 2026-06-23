@@ -13,6 +13,17 @@ let BIEN_FUNC   = [];
 let BIEN_DETAIL = null;
 let BIEN_VISTA  = 'lista'; // lista | detalle
 
+/** Convierte URL de Google Drive a URL de imagen embebida */
+function driveImageUrl(url) {
+  if (!url) return '';
+  // Extraer ID del archivo desde diferentes formatos de URL de Drive
+  var match = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!match) match = String(url).match(/id=([a-zA-Z0-9_-]+)/);
+  if (!match) match = String(url).match(/open\?id=([a-zA-Z0-9_-]+)/);
+  if (match) return 'https://lh3.googleusercontent.com/d/' + match[1];
+  return url; // Si no es Drive, retornar tal cual
+}
+
 window.render_bienes = async function() {
   BIEN_VISTA = 'lista';
   BIEN_DETAIL = null;
@@ -199,7 +210,11 @@ function bien_renderTabla(data) {
           <tr style="cursor:pointer" onclick="bien_verDetalle('${b.BIEN_ADM_ID}')">
             <td>
               <div style="display:flex;align-items:center;gap:10px">
-                <div style="font-size:1.4rem">${TIPO_EMOJI[b.tipo_bien] || '📦'}</div>
+                <div style="width:42px;height:42px;border-radius:var(--r);overflow:hidden;background:var(--gris-surface);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  ${b.imagen_principal
+                    ? `<img src="${driveImageUrl(b.imagen_principal)}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<span style=font-size:1.4rem>${TIPO_EMOJI[b.tipo_bien] || '📦'}</span>'">`
+                    : `<span style="font-size:1.4rem">${TIPO_EMOJI[b.tipo_bien] || '📦'}</span>`}
+                </div>
                 <div>
                   <div style="font-weight:600;font-size:var(--text-sm);color:var(--oscuro)">${b.identificador}</div>
                   <div style="font-size:var(--text-xs);color:var(--gris-mid)">${b.tipo_bien}${b.subtipo_bien ? ' · ' + b.subtipo_bien : ''}</div>
@@ -305,6 +320,11 @@ function bien_modalHTML() {
             <div class="form-group">
               <label class="form-label">Descripción</label>
               <textarea class="form-control" id="bien-m-descripcion" rows="2" placeholder="Descripción del bien..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🖼️ Imagen principal (URL de Google Drive)</label>
+              <input type="url" class="form-control" id="bien-m-imagen" placeholder="https://drive.google.com/file/d/.../view">
+              <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:4px">Clic derecho en la foto del Drive → "Obtener vínculo" → pegar aquí</div>
             </div>
             <div class="form-row-2">
               <div class="form-group">
@@ -430,6 +450,7 @@ function bien_abrirModal(BIEN_ID = null) {
   document.getElementById('bien-m-subtipo').value = '';
   document.getElementById('bien-m-identificador').value = '';
   document.getElementById('bien-m-descripcion').value = '';
+  document.getElementById('bien-m-imagen').value = '';
   document.getElementById('bien-m-direccion').value = '';
   document.getElementById('bien-m-municipio').value = '';
   document.getElementById('bien-m-barrio').value = '';
@@ -460,6 +481,7 @@ function bien_abrirModal(BIEN_ID = null) {
       document.getElementById('bien-m-subtipo').value         = b.subtipo_bien || '';
       document.getElementById('bien-m-identificador').value   = b.identificador || '';
       document.getElementById('bien-m-descripcion').value     = b.descripcion || '';
+      document.getElementById('bien-m-imagen').value          = b.imagen_principal || '';
       document.getElementById('bien-m-direccion').value       = b.direccion || '';
       document.getElementById('bien-m-municipio').value       = b.municipio || '';
       document.getElementById('bien-m-barrio').value          = b.barrio || '';
@@ -497,6 +519,7 @@ async function bien_guardar() {
     subtipo_bien:         document.getElementById('bien-m-subtipo').value,
     identificador:        document.getElementById('bien-m-identificador').value.trim(),
     descripcion:          document.getElementById('bien-m-descripcion').value.trim(),
+    imagen_principal:     document.getElementById('bien-m-imagen').value.trim(),
     propietario_nombre:   document.getElementById('bien-m-prop-nombre').value.trim(),
     propietario_cedula:   document.getElementById('bien-m-prop-cedula').value.trim(),
     propietario_telefono: document.getElementById('bien-m-prop-telefono').value.trim(),
@@ -577,7 +600,9 @@ function bien_renderDetalle() {
         Volver al listado
       </button>
       <div style="display:flex;align-items:center;gap:14px">
-        <div style="font-size:2rem">${TIPO_EMOJI[b.tipo_bien] || '📦'}</div>
+        ${b.imagen_principal
+          ? `<div style="width:80px;height:80px;border-radius:var(--r);overflow:hidden;flex-shrink:0;border:2px solid var(--gris-borde)"><img src="${driveImageUrl(b.imagen_principal)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<div style=font-size:2.5rem;display:flex;align-items:center;justify-content:center;height:100%>${TIPO_EMOJI[b.tipo_bien] || '📦'}</div>'"></div>`
+          : `<div style="font-size:2rem">${TIPO_EMOJI[b.tipo_bien] || '📦'}</div>`}
         <div>
           <h2 style="font-family:var(--font-display);font-size:1.35rem;font-weight:800;color:var(--oscuro);margin:0">${b.identificador}</h2>
           <div style="font-size:var(--text-sm);color:var(--gris-mid);margin-top:3px">
