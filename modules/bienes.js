@@ -441,7 +441,7 @@ function bien_modalHTML() {
               <input type="url" class="form-control" id="bien-m-video" placeholder="https://www.youtube.com/watch?v=...">
             </div>
             <div class="form-group">
-              <label class="form-label">🌐 Tour virtual </label>
+              <label class="form-label">🌐 Tour virtual (código embed Kuula u otro)</label>
               <textarea class="form-control" id="bien-m-tour" rows="3" placeholder='<iframe src="https://kuula.co/share/..." ...></iframe>'></textarea>
               <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:4px">Pega el código iframe completo que te da Kuula o la plataforma de tour virtual</div>
             </div>
@@ -670,7 +670,8 @@ function bien_renderDetalle() {
             ${b.url_carpeta_drive ? ` · <a href="${b.url_carpeta_drive}" target="_blank" style="color:var(--azul);text-decoration:none">📁 Ver carpeta Drive</a>` : ''}
           </div>
         </div>
-        <div style="margin-left:auto;display:flex;gap:8px">
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="bien_generarFicha()" style="font-size:var(--text-xs)">📄 Ficha técnica</button>
           <span class="badge ${bien_badgeEstado(b.estado)}" style="font-size:var(--text-sm);padding:6px 14px">${b.estado}</span>
           <span class="badge badge-azul" style="font-size:var(--text-sm);padding:6px 14px">${b.modalidad}</span>
         </div>
@@ -1212,6 +1213,172 @@ function bien_verFoto(url) {
   div.onclick = () => div.remove();
   div.innerHTML = `<img src="${url}" style="max-width:95%;max-height:95%;object-fit:contain;border-radius:8px">`;
   document.body.appendChild(div);
+}
+
+/** Genera ficha técnica HTML del bien en ventana nueva con botón imprimir */
+function bien_generarFicha() {
+  const b = BIEN_DETAIL;
+  if (!b) return;
+
+  const fotos = (b.galeria_fotos || '').split('|').filter(f => f.trim());
+  const TIPO_EMOJI = { Inmueble:'🏠', 'Vehículo':'🚗', Maquinaria:'⚙️', Ganado:'🐄', Otro:'📦' };
+  const fechaHoy = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'long', year:'numeric' });
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ficha Técnica — ${b.identificador}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color:#1a1a2e; background:#fff; padding:20px; max-width:900px; margin:0 auto; }
+    .header { display:flex; align-items:center; gap:20px; border-bottom:3px solid #0D1F5C; padding-bottom:16px; margin-bottom:20px; }
+    .header-img { width:120px; height:120px; border-radius:8px; overflow:hidden; border:2px solid #e0e0e0; flex-shrink:0; background:#f5f5f5; }
+    .header-img img { width:100%; height:100%; object-fit:cover; }
+    .header-info h1 { font-size:22px; color:#0D1F5C; margin-bottom:4px; }
+    .header-info .sub { font-size:13px; color:#666; }
+    .badges { display:flex; gap:8px; margin-top:8px; }
+    .badge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-navy { background:#0D1F5C; color:#fff; }
+    .badge-blue { background:#1a7fe8; color:#fff; }
+    .badge-green { background:#16a34a; color:#fff; }
+    .section { margin-bottom:18px; }
+    .section-title { font-size:14px; font-weight:700; color:#0D1F5C; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #e0e0e0; padding-bottom:6px; margin-bottom:10px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px 24px; }
+    .field { margin-bottom:6px; }
+    .field-label { font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:#888; }
+    .field-value { font-size:13px; font-weight:500; }
+    .galeria { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-top:8px; }
+    .galeria img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:6px; border:1px solid #e0e0e0; }
+    .footer { margin-top:24px; padding-top:12px; border-top:2px solid #0D1F5C; display:flex; justify-content:space-between; font-size:11px; color:#888; }
+    .footer strong { color:#0D1F5C; }
+    .btn-print { position:fixed; top:20px; right:20px; background:#0D1F5C; color:#fff; border:none; padding:10px 20px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; z-index:100; }
+    .btn-print:hover { background:#1a3080; }
+    @media print {
+      .btn-print { display:none; }
+      body { padding:10px; }
+      .galeria { grid-template-columns:repeat(5, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+
+  <div class="header">
+    <div class="header-img">
+      ${b.imagen_principal
+        ? `<img src="${driveImageUrl(b.imagen_principal)}" onerror="this.style.display='none'">`
+        : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px">${TIPO_EMOJI[b.tipo_bien] || '📦'}</div>`}
+    </div>
+    <div class="header-info">
+      <h1>${b.identificador}</h1>
+      <div class="sub">${b.tipo_bien}${b.subtipo_bien ? ' · ' + b.subtipo_bien : ''} · ${b.municipio || '—'}</div>
+      <div class="badges">
+        <span class="badge badge-navy">${b.estado || '—'}</span>
+        <span class="badge badge-blue">${b.modalidad || '—'}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Información del bien</div>
+    <div class="grid">
+      <div class="field"><div class="field-label">Tipo</div><div class="field-value">${b.tipo_bien || '—'}</div></div>
+      <div class="field"><div class="field-label">Subtipo</div><div class="field-value">${b.subtipo_bien || '—'}</div></div>
+      <div class="field"><div class="field-label">Dirección</div><div class="field-value">${b.direccion || '—'}</div></div>
+      <div class="field"><div class="field-label">Municipio</div><div class="field-value">${b.municipio || '—'}</div></div>
+      <div class="field"><div class="field-label">Barrio / Sector</div><div class="field-value">${b.barrio || '—'}</div></div>
+      <div class="field"><div class="field-label">Fecha recepción</div><div class="field-value">${formatFecha(b.fecha_recepcion)}</div></div>
+      <div class="field"><div class="field-label">Área terreno</div><div class="field-value">${b.area_terreno ? b.area_terreno + ' m²' : '—'}</div></div>
+      <div class="field"><div class="field-label">Área construida</div><div class="field-value">${b.area_construida ? b.area_construida + ' m²' : '—'}</div></div>
+    </div>
+    ${b.descripcion ? `<div class="field" style="margin-top:8px"><div class="field-label">Descripción</div><div class="field-value">${b.descripcion}</div></div>` : ''}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Información comercial</div>
+    <div class="grid-3">
+      <div class="field"><div class="field-label">Avalúo</div><div class="field-value">${b.avaluo ? formatCOP(b.avaluo) : '—'}</div></div>
+      <div class="field"><div class="field-label">Precio arriendo</div><div class="field-value">${b.precio_arriendo ? formatCOP(b.precio_arriendo) + '/mes' : '—'}</div></div>
+      <div class="field"><div class="field-label">Precio venta</div><div class="field-value">${b.precio_venta ? formatCOP(b.precio_venta) : '—'}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Propietario</div>
+    <div class="grid">
+      <div class="field"><div class="field-label">Nombre</div><div class="field-value">${b.propietario_nombre || '—'}</div></div>
+      <div class="field"><div class="field-label">Cédula</div><div class="field-value">${b.propietario_cedula || '—'}</div></div>
+      <div class="field"><div class="field-label">Teléfono</div><div class="field-value">${b.propietario_telefono || '—'}</div></div>
+      <div class="field"><div class="field-label">Correo</div><div class="field-value">${b.propietario_email || '—'}</div></div>
+    </div>
+  </div>
+
+  ${(b.documentos || []).length > 0 ? `
+  <div class="section">
+    <div class="section-title">Documentos (${b.documentos.length})</div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr style="background:#f0f0f0;text-align:left">
+        <th style="padding:6px 8px">Documento</th>
+        <th style="padding:6px 8px">Tipo</th>
+        <th style="padding:6px 8px">Estado</th>
+        <th style="padding:6px 8px">Vencimiento</th>
+      </tr></thead>
+      <tbody>
+        ${b.documentos.map(d => `<tr style="border-bottom:1px solid #eee">
+          <td style="padding:5px 8px">${d.nombre_documento}</td>
+          <td style="padding:5px 8px">${d.tipo_documento}</td>
+          <td style="padding:5px 8px">${d.estado || '—'}</td>
+          <td style="padding:5px 8px">${formatFecha(d.fecha_vencimiento)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  ${(b.participantes || []).length > 0 ? `
+  <div class="section">
+    <div class="section-title">Equipo asignado (${b.participantes.length})</div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr style="background:#f0f0f0;text-align:left">
+        <th style="padding:6px 8px">Funcionario</th>
+        <th style="padding:6px 8px">Área</th>
+        <th style="padding:6px 8px">Rol</th>
+      </tr></thead>
+      <tbody>
+        ${b.participantes.map(p => `<tr style="border-bottom:1px solid #eee">
+          <td style="padding:5px 8px">${p.func_nombre || '—'}</td>
+          <td style="padding:5px 8px">${p.func_area || '—'}</td>
+          <td style="padding:5px 8px">${p.rol_proceso || '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  ${fotos.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Galería fotográfica (${fotos.length})</div>
+    <div class="galeria">
+      ${fotos.map(url => `<img src="${driveImageUrl(url)}" onerror="this.style.display='none'">`).join('')}
+    </div>
+  </div>` : ''}
+
+  ${b.observaciones ? `
+  <div class="section">
+    <div class="section-title">Observaciones</div>
+    <div style="font-size:13px;line-height:1.5">${b.observaciones}</div>
+  </div>` : ''}
+
+  <div class="footer">
+    <div><strong>Constructora Montefiori S.A.S.</strong> · Alianza Empresarial</div>
+    <div>Generado el ${fechaHoy} · Desarrollado por TourLat</div>
+  </div>
+</body>
+</html>`;
+
+  const ventana = window.open('', '_blank');
+  ventana.document.write(html);
+  ventana.document.close();
 }
 
 // ── EQUIPO (PARTICIPANTES) ──────────────────────────────
