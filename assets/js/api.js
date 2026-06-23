@@ -11,7 +11,7 @@
  * ============================================================
  */
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbx_uHh5olen0N-_AM8NlBk0SEbIvMVQaintcMvTOey8gP1P9mm5OVMp-V0pkesCzUw_-A/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxuenUGdwhF5mkPFqJm0EUr-mvgsbpvGdf1bDxdl-94rhxmdVMnwh7D_4U6Kc2HFnW4_Q/exec';
 
 async function api(action, data = {}) {
   const body = { action, data };
@@ -70,6 +70,12 @@ async function apiGetDocsBien(BIEN_ADM_ID)         { return api('getDocsBien', {
 async function apiSaveDocBien(data)                { return api('saveDocBien', data); }
 async function apiDeleteDocBien(DOC_BIEN_ID)       { return api('deleteDocBien', { DOC_BIEN_ID }); }
 
-/* ── Mantenimiento de bien ── */
-async function apiGetMantBien(BIEN_ADM_ID)         { return api('getMantBien', { BIEN_ADM_ID }); }
+/* ── Mantenimiento / Órdenes de trabajo ── */
+async function apiGetMantBien(filtros)             { return api('getMantBien', filtros || {}); }
 async function apiSaveMantBien(data)               { return api('saveMantBien', data); }
+async function apiAprobarMant(MANT_ID)             { return api('aprobarMant', { MANT_ID }); }
+async function apiRechazarMant(MANT_ID, motivo)    { return api('rechazarMant', { MANT_ID, motivo_rechazo: motivo }); }
+async function apiAvanzarMant(MANT_ID, nuevo_estado, evidencia_url) { return api('avanzarMant', { MANT_ID, nuevo_estado, evidencia_url }); }
+async function apiGetMantItems(MANT_ID)            { return api('getMantItems', { MANT_ID }); }
+async function apiSaveMantItem(data)               { return api('saveMantItem', data); }
+async function apiDeleteMantItem(ITEM_ID)          { return api('deleteMantItem', { ITEM_ID }); }
