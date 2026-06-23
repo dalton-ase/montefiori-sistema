@@ -1116,6 +1116,7 @@ function mant_renderCard(m) {
           <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:4px">
             Solicitado por ${m.solicitado_por_nombre || '—'} · ${formatFecha(m.fecha_solicitud)}
             ${m.aprobado_por_nombre ? ' · Aprobado por ' + m.aprobado_por_nombre : ''}
+            ${m.asignado_a_nombre ? ' · <strong style="color:var(--azul)">Asignado a: ' + m.asignado_a_nombre + '</strong>' : ''}
             ${m.motivo_rechazo ? ' · <span style="color:var(--peligro)">Motivo: ' + m.motivo_rechazo + '</span>' : ''}
           </div>
         </div>
@@ -1251,12 +1252,57 @@ async function bien_guardarMant() {
 
 // ── Acciones del flujo ──
 async function mant_aprobar(MANT_ID) {
-  if (!confirm('¿Aprobar esta orden de trabajo?')) return;
+  // Mostrar modal de aprobación con selección de responsable
+  if (!document.getElementById('aprobar-modal')) {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div class="modal-backdrop" id="aprobar-modal">
+        <div class="modal" style="max-width:440px">
+          <div class="modal-header">
+            <div class="modal-title">Aprobar orden de trabajo</div>
+            <button class="modal-close" onclick="document.getElementById('aprobar-modal').classList.remove('active')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label req">¿A quién se asigna esta orden?</label>
+              <select class="form-control" id="aprobar-asignado">
+                <option value="">Selecciona responsable</option>
+              </select>
+              <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:4px">Esta persona recibirá la tarea y será responsable de ejecutarla</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="document.getElementById('aprobar-modal').classList.remove('active')">Cancelar</button>
+            <button class="btn btn-primary" style="background:var(--exito)" id="aprobar-btn" onclick="mant_confirmarAprobacion()">✓ Aprobar y asignar</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(div);
+  }
+  // Llenar select con funcionarios
+  const sel = document.getElementById('aprobar-asignado');
+  sel.innerHTML = '<option value="">Selecciona responsable</option>';
+  BIEN_FUNC.forEach(f => { sel.innerHTML += `<option value="${f.FUNC_ID}">${f.nombre} ${f.apellido} — ${f.area}</option>`; });
+  window._mant_aprobar_id = MANT_ID;
+  document.getElementById('aprobar-modal').classList.add('active');
+}
+
+async function mant_confirmarAprobacion() {
+  const asignado = document.getElementById('aprobar-asignado').value;
+  if (!asignado) { toast('Selecciona a quién se asigna', 'error'); return; }
+  const btn = document.getElementById('aprobar-btn');
+  btn.disabled = true; btn.textContent = 'Aprobando...';
   try {
-    const res = await apiAprobarMant(MANT_ID);
-    if (res.ok) { toast('Orden aprobada', 'ok'); await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID); }
-    else toast(res.error || 'Error', 'error');
+    const res = await api('aprobarMant', { MANT_ID: window._mant_aprobar_id, asignado_a: asignado });
+    if (res.ok) {
+      toast('Orden aprobada y asignada', 'ok');
+      document.getElementById('aprobar-modal').classList.remove('active');
+      await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID);
+    } else toast(res.error || 'Error', 'error');
   } catch(e) { toast('Error de conexión', 'error'); }
+  btn.disabled = false; btn.textContent = '✓ Aprobar y asignar';
 }
 
 async function mant_rechazar(MANT_ID) {
