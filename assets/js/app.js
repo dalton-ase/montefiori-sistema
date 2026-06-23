@@ -246,6 +246,97 @@ function logout() {
   toast('Sesión cerrada correctamente', 'info');
 }
 
+/* CAMBIAR CONTRASEÑA */
+function abrirCambiarPassword() {
+  if (!document.getElementById('password-modal')) {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div class="modal-backdrop" id="password-modal">
+        <div class="modal" style="max-width:420px">
+          <div class="modal-header">
+            <div class="modal-title">Cambiar contraseña</div>
+            <button class="modal-close" onclick="document.getElementById('password-modal').classList.remove('active')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label req">Contraseña actual</label>
+              <input type="password" class="form-control" id="pw-actual" placeholder="Tu contraseña actual">
+            </div>
+            <div class="form-group">
+              <label class="form-label req">Nueva contraseña</label>
+              <input type="password" class="form-control" id="pw-nueva" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="form-group">
+              <label class="form-label req">Confirmar nueva contraseña</label>
+              <input type="password" class="form-control" id="pw-confirmar" placeholder="Repite la nueva contraseña">
+            </div>
+            <div id="pw-error" style="display:none;padding:10px 12px;background:var(--peligro-light);border:1px solid var(--peligro-borde);border-radius:var(--r);color:var(--peligro);font-size:var(--text-sm);margin-top:8px"></div>
+            <div id="pw-ok" style="display:none;padding:10px 12px;background:var(--exito-light);border:1px solid var(--exito-borde);border-radius:var(--r);color:var(--exito);font-size:var(--text-sm);margin-top:8px"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="document.getElementById('password-modal').classList.remove('active')">Cancelar</button>
+            <button class="btn btn-primary" id="pw-btn" onclick="guardarPassword()">Cambiar contraseña</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(div);
+  }
+  document.getElementById('pw-actual').value = '';
+  document.getElementById('pw-nueva').value = '';
+  document.getElementById('pw-confirmar').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+  document.getElementById('pw-ok').style.display = 'none';
+  document.getElementById('password-modal').classList.add('active');
+}
+
+async function guardarPassword() {
+  const errEl = document.getElementById('pw-error');
+  const okEl  = document.getElementById('pw-ok');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  const actual    = document.getElementById('pw-actual').value.trim();
+  const nueva     = document.getElementById('pw-nueva').value.trim();
+  const confirmar = document.getElementById('pw-confirmar').value.trim();
+
+  if (!actual || !nueva || !confirmar) {
+    errEl.textContent = 'Todos los campos son requeridos';
+    errEl.style.display = 'block'; return;
+  }
+  if (nueva.length < 6) {
+    errEl.textContent = 'La nueva contraseña debe tener al menos 6 caracteres';
+    errEl.style.display = 'block'; return;
+  }
+  if (nueva !== confirmar) {
+    errEl.textContent = 'La nueva contraseña y la confirmación no coinciden';
+    errEl.style.display = 'block'; return;
+  }
+
+  const btn = document.getElementById('pw-btn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  try {
+    const res = await apiChangePassword(actual, nueva);
+    if (res.ok) {
+      okEl.textContent = 'Contraseña actualizada. En tu próximo inicio de sesión usa la nueva contraseña.';
+      okEl.style.display = 'block';
+      document.getElementById('pw-actual').value = '';
+      document.getElementById('pw-nueva').value = '';
+      document.getElementById('pw-confirmar').value = '';
+    } else {
+      errEl.textContent = res.error || 'Error al cambiar contraseña';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false; btn.textContent = 'Cambiar contraseña';
+}
+
 /* AUTO-LOGIN */
 (async function() {
   const t = sessionStorage.getItem('crm_token');
