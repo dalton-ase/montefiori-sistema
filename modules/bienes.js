@@ -1041,6 +1041,7 @@ async function mant_completar(MANT_ID) {
     if (res.ok) { toast('Orden completada', 'ok'); await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID); }
     else toast(res.error || 'Error', 'error');
   } catch(e) { toast('Error de conexión', 'error'); }
+}
 
 // ── EQUIPO (PARTICIPANTES) ──────────────────────────────
 
