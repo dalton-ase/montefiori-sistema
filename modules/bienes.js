@@ -293,6 +293,7 @@ function bien_modalHTML() {
             <button class="tab-btn active" onclick="bien_tabModal('info')">Información</button>
             <button class="tab-btn" onclick="bien_tabModal('propietario')">Propietario</button>
             <button class="tab-btn" onclick="bien_tabModal('comercial')">Comercial</button>
+            <button class="tab-btn" onclick="bien_tabModal('multimedia')">Multimedia</button>
           </div>
 
           <!-- Tab Info -->
@@ -418,6 +419,34 @@ function bien_modalHTML() {
             </div>
           </div>
 
+          <!-- Tab Multimedia -->
+          <div id="bien-tab-multimedia" style="display:none">
+            <div style="padding:10px 14px;background:var(--azul-light);border-radius:var(--r);border:1px solid var(--azul-alpha);margin-bottom:14px;font-size:var(--text-xs);color:var(--navy)">
+              Pega los enlaces de compartir de Google Drive para cada foto. Clic derecho en la foto → "Obtener vínculo" → pegar. La previsualización aparece automáticamente.
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+              ${[1,2,3,4,5,6,7,8,9,10].map(i => `
+              <div style="display:flex;gap:8px;align-items:start">
+                <div id="bien-m-foto-prev-${i}" style="width:60px;height:60px;border-radius:var(--r);overflow:hidden;border:1px solid var(--gris-borde);background:var(--gris-surface);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+                  <span style="font-size:var(--text-xs);color:var(--gris-mid)">${i}</span>
+                </div>
+                <div class="form-group" style="margin:0;flex:1">
+                  <label class="form-label" style="font-size:10px">Foto ${i}</label>
+                  <input type="url" class="form-control" id="bien-m-foto-${i}" placeholder="URL foto ${i}" style="font-size:var(--text-xs);padding:6px 10px" oninput="bien_prevFoto(${i})">
+                </div>
+              </div>`).join('')}
+            </div>
+            <div class="form-group">
+              <label class="form-label">🎬 Video YouTube</label>
+              <input type="url" class="form-control" id="bien-m-video" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">🌐 Tour virtual (código embed Kuula u otro)</label>
+              <textarea class="form-control" id="bien-m-tour" rows="3" placeholder='<iframe src="https://kuula.co/share/..." ...></iframe>'></textarea>
+              <div style="font-size:var(--text-xs);color:var(--gris-mid);margin-top:4px">Pega el código iframe completo que te da Kuula o la plataforma de tour virtual</div>
+            </div>
+          </div>
+
           <div id="bien-error" style="display:none;padding:10px 12px;background:var(--peligro-light);
                border:1px solid var(--peligro-borde);border-radius:var(--r);
                color:var(--peligro);font-size:var(--text-sm);margin-top:10px"></div>
@@ -433,13 +462,32 @@ function bien_modalHTML() {
     </div>`;
 }
 
+/** Previsualiza foto al pegar URL en el campo */
+function bien_prevFoto(num) {
+  const input = document.getElementById('bien-m-foto-' + num);
+  const prev = document.getElementById('bien-m-foto-prev-' + num);
+  if (!input || !prev) return;
+  const url = input.value.trim();
+  if (!url) {
+    prev.innerHTML = `<span style="font-size:var(--text-xs);color:var(--gris-mid)">${num}</span>`;
+    return;
+  }
+  const imgUrl = driveImageUrl(url);
+  prev.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<span style=font-size:10px;color:var(--peligro)>Error</span>'">`;
+}
+
+/** Carga previsualizaciones para todas las fotos existentes */
+function bien_cargarPreviews() {
+  for (let i = 1; i <= 10; i++) bien_prevFoto(i);
+}
+
 function bien_tabModal(tab) {
-  ['info','propietario','comercial'].forEach(t => {
+  ['info','propietario','comercial','multimedia'].forEach(t => {
     const el = document.getElementById('bien-tab-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('#bien-modal .tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', ['info','propietario','comercial'][i] === tab);
+    btn.classList.toggle('active', ['info','propietario','comercial','multimedia'][i] === tab);
   });
 }
 
@@ -468,6 +516,10 @@ function bien_abrirModal(BIEN_ID = null) {
   document.getElementById('bien-m-precio-arriendo').value = '';
   document.getElementById('bien-m-precio-venta').value = '';
   document.getElementById('bien-m-observaciones').value = '';
+  document.getElementById('bien-m-video').value = '';
+  document.getElementById('bien-m-tour').value = '';
+  for (let i = 1; i <= 10; i++) document.getElementById('bien-m-foto-' + i).value = '';
+  bien_cargarPreviews();
   document.getElementById('bien-error').style.display = 'none';
   bien_tabModal('info');
   bien_actualizarSubtipos();
@@ -499,6 +551,11 @@ function bien_abrirModal(BIEN_ID = null) {
       document.getElementById('bien-m-precio-arriendo').value = b.precio_arriendo || '';
       document.getElementById('bien-m-precio-venta').value    = b.precio_venta || '';
       document.getElementById('bien-m-observaciones').value   = b.observaciones || '';
+      document.getElementById('bien-m-video').value           = b.video_youtube || '';
+      document.getElementById('bien-m-tour').value            = b.tour_virtual || '';
+      const fotos = (b.galeria_fotos || '').split('|').filter(f => f.trim());
+      for (let i = 1; i <= 10; i++) document.getElementById('bien-m-foto-' + i).value = fotos[i-1] || '';
+      bien_cargarPreviews();
     }
   }
 
@@ -536,6 +593,9 @@ async function bien_guardar() {
     precio_venta:         document.getElementById('bien-m-precio-venta').value || '',
     url_carpeta_drive:    document.getElementById('bien-m-drive').value.trim(),
     observaciones:        document.getElementById('bien-m-observaciones').value.trim(),
+    galeria_fotos:        [1,2,3,4,5,6,7,8,9,10].map(i => document.getElementById('bien-m-foto-' + i).value.trim()).filter(f => f).join('|'),
+    video_youtube:        document.getElementById('bien-m-video').value.trim(),
+    tour_virtual:         document.getElementById('bien-m-tour').value.trim(),
     fecha_recepcion:      document.getElementById('bien-m-fecha-recepcion').value
   };
 
@@ -639,6 +699,7 @@ function bien_renderDetalle() {
       <button class="tab-btn active" onclick="bien_tabDetalle('docs')">📄 Documentos <span class="nav-badge" style="margin-left:6px">${(b.documentos||[]).length}</span></button>
       <button class="tab-btn" onclick="bien_tabDetalle('mant')">🔧 Mantenimiento <span class="nav-badge" style="margin-left:6px">${(b.mantenimientos||[]).length}</span></button>
       <button class="tab-btn" onclick="bien_tabDetalle('equipo')">👥 Equipo <span class="nav-badge" style="margin-left:6px">${(b.participantes||[]).length}</span></button>
+      <button class="tab-btn" onclick="bien_tabDetalle('media')">🖼️ Multimedia</button>
     </div>
 
     <div id="bien-detalle-contenido" class="anim-3"></div>
@@ -652,11 +713,12 @@ function bien_renderDetalle() {
 
 function bien_tabDetalle(tab) {
   document.querySelectorAll('.tabs .tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', ['docs','mant','equipo'][i] === tab);
+    btn.classList.toggle('active', ['docs','mant','equipo','media'][i] === tab);
   });
   if (tab === 'docs')   bien_renderDocs();
   if (tab === 'mant')   bien_renderMant();
   if (tab === 'equipo') bien_renderEquipo();
+  if (tab === 'media')  bien_renderMedia();
 }
 
 // ── DOCUMENTOS ──────────────────────────────────────────
@@ -1077,6 +1139,79 @@ async function mant_completar(MANT_ID) {
     if (res.ok) { toast('Orden completada', 'ok'); await bien_verDetalle(BIEN_DETAIL.BIEN_ADM_ID); }
     else toast(res.error || 'Error', 'error');
   } catch(e) { toast('Error de conexión', 'error'); }
+}
+
+// ── MULTIMEDIA ──────────────────────────────────────────
+
+function bien_renderMedia() {
+  const cont = document.getElementById('bien-detalle-contenido');
+  const b = BIEN_DETAIL;
+  const fotos = (b.galeria_fotos || '').split('|').filter(f => f.trim());
+
+  cont.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-title">Galería de fotos</div>
+      </div>
+      <div class="card-body">
+        ${fotos.length === 0 ? `
+          <div style="text-align:center;padding:20px;color:var(--gris-mid);font-size:var(--text-sm)">
+            Sin fotos. Edita el bien → pestaña Multimedia para agregar.
+          </div>` : `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+          ${fotos.map((url, i) => `
+            <div style="aspect-ratio:4/3;border-radius:var(--r);overflow:hidden;border:1px solid var(--gris-borde);cursor:pointer;background:var(--gris-surface)" onclick="bien_verFoto('${driveImageUrl(url)}')">
+              <img src="${driveImageUrl(url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;color:var(--gris-mid);font-size:var(--text-xs)>Error cargando foto ${i+1}</div>'">
+            </div>`).join('')}
+        </div>`}
+      </div>
+    </div>
+
+    ${b.video_youtube ? `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-title">Video</div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:0 0 var(--r) var(--r)">
+          <iframe src="${youtubeEmbedUrl(b.video_youtube)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>` : ''}
+
+    ${b.tour_virtual ? `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Tour virtual 360°</div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:0 0 var(--r) var(--r)">
+          ${b.tour_virtual}
+        </div>
+      </div>
+    </div>` : ''}
+
+    ${!b.video_youtube && !b.tour_virtual && fotos.length === 0 ? `
+    <div style="text-align:center;padding:30px;color:var(--gris-mid);font-size:var(--text-sm)">
+      Sin contenido multimedia. Edita el bien → pestaña Multimedia para agregar fotos, video y tour virtual.
+    </div>` : ''}`;
+}
+
+/** Convierte URL de YouTube a embed */
+function youtubeEmbedUrl(url) {
+  if (!url) return '';
+  var match = String(url).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/);
+  if (match) return 'https://www.youtube.com/embed/' + match[1];
+  return url;
+}
+
+/** Abre foto en modal lightbox */
+function bien_verFoto(url) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:20px';
+  div.onclick = () => div.remove();
+  div.innerHTML = `<img src="${url}" style="max-width:95%;max-height:95%;object-fit:contain;border-radius:8px">`;
+  document.body.appendChild(div);
 }
 
 // ── EQUIPO (PARTICIPANTES) ──────────────────────────────
