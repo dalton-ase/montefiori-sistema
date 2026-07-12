@@ -13,6 +13,34 @@ let BIEN_FUNC   = [];
 let BIEN_DETAIL = null;
 let BIEN_VISTA  = 'lista'; // lista | detalle
 
+/** Columnas del bien que guarda el backend (usadas para preservar datos en guardados parciales) */
+const BIEN_CAMPOS = [
+  'tipo_bien','subtipo_bien','identificador','descripcion','imagen_principal',
+  'propietario_nombre','propietario_cedula','propietario_telefono','propietario_email',
+  'modalidad','estado','direccion','municipio','barrio',
+  'area_terreno','area_construida','avaluo','precio_arriendo','precio_venta',
+  'url_carpeta_drive','observaciones','galeria_fotos','video_youtube','tour_virtual',
+  'fecha_recepcion','documentacion'
+];
+
+/**
+ * Completa un payload de guardado con los valores existentes del bien
+ * para que un guardado parcial NUNCA borre campos que no se están editando
+ * (fotos, tour virtual, documentación, etc.).
+ */
+function bien_mergeConExistente(data, existente) {
+  if (!existente) return data;
+  BIEN_CAMPOS.forEach(k => {
+    if (data[k] === undefined) {
+      let v = existente[k];
+      if (v === undefined || v === null) v = '';
+      if (k === 'fecha_recepcion' && v) v = String(v).split('T')[0];
+      data[k] = v;
+    }
+  });
+  return data;
+}
+
 /** Convierte URL de Google Drive a URL de imagen embebida */
 function driveImageUrl(url) {
   if (!url) return '';
@@ -599,6 +627,14 @@ async function bien_guardar() {
     fecha_recepcion:      document.getElementById('bien-m-fecha-recepcion').value
   };
 
+  // Si es edición, preservar campos que este modal no maneja (ej. documentación)
+  if (data.BIEN_ADM_ID) {
+    const existente = (BIEN_DETAIL && BIEN_DETAIL.BIEN_ADM_ID === data.BIEN_ADM_ID)
+      ? BIEN_DETAIL
+      : BIEN_DATA.find(x => x.BIEN_ADM_ID === data.BIEN_ADM_ID);
+    bien_mergeConExistente(data, existente);
+  }
+
   if (!data.tipo_bien || !data.identificador || !data.propietario_nombre || !data.modalidad || !data.estado) {
     errEl.textContent = 'Completa: tipo, identificador, propietario, modalidad y estado.';
     errEl.style.display = 'block';
@@ -842,15 +878,14 @@ async function bien_guardarDocUrls() {
   btn.disabled = true; btn.textContent = 'Guardando...';
 
   try {
-    const res = await apiSaveBien({
+    // Enviar el registro COMPLETO del bien + la nueva documentación,
+    // para no borrar fotos, tour virtual, video ni ningún otro campo existente.
+    const payload = bien_mergeConExistente({
       BIEN_ADM_ID: BIEN_DETAIL.BIEN_ADM_ID,
-      tipo_bien: BIEN_DETAIL.tipo_bien,
-      identificador: BIEN_DETAIL.identificador,
-      propietario_nombre: BIEN_DETAIL.propietario_nombre,
-      modalidad: BIEN_DETAIL.modalidad,
-      estado: BIEN_DETAIL.estado,
       documentacion: JSON.stringify(docData)
-    });
+    }, BIEN_DETAIL);
+
+    const res = await apiSaveBien(payload);
     if (res.ok) {
       toast('Documentación guardada', 'ok');
       document.getElementById('docurls-modal').classList.remove('active');
