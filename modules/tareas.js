@@ -44,6 +44,12 @@ window.render_tareas=async function(){
       </div>
       <select class="form-control" id="task-filtro-prioridad" onchange="task_filtrar()" style="width:130px;padding:8px 10px;font-size:var(--text-xs)"><option value="">Prioridad</option><option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option></select>
       <select class="form-control" id="task-filtro-area" onchange="task_filtrar()" style="width:130px;padding:8px 10px;font-size:var(--text-xs)"><option value="">Área</option></select>
+      <select class="form-control" id="task-filtro-completadas" onchange="task_filtrar()" style="width:150px;padding:8px 10px;font-size:var(--text-xs)">
+        <option value="7">Completadas: 7 días</option>
+        <option value="30">Completadas: 30 días</option>
+        <option value="all">Todas las completadas</option>
+        <option value="hide">Ocultar completadas</option>
+      </select>
     </div>
   </div>
   <div id="task-kanban" class="anim-3" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start;min-height:400px">
@@ -424,12 +430,16 @@ function task_filtrar(){
   });
   data=data.filter(function(t){return t.estado!=='Cancelada';});
 
-  // Filtrar completadas: solo últimos 7 días salvo que se pida ver todas
-  if(!TASK_SHOW_ALL_DONE){
-    var hace7d=new Date();hace7d.setDate(hace7d.getDate()-7);
+  // Filtrar completadas según selector
+  var filtroComp=document.getElementById('task-filtro-completadas')?.value||'7';
+  if(filtroComp==='hide'){
+    data=data.filter(function(t){return t.estado!=='Completada';});
+  } else if(filtroComp!=='all'){
+    var diasFiltro=parseInt(filtroComp)||7;
+    var desde=new Date();desde.setDate(desde.getDate()-diasFiltro);
     data=data.filter(function(t){
       if(t.estado!=='Completada')return true;
-      return t.fecha_completada_real&&new Date(t.fecha_completada_real)>=hace7d;
+      return t.fecha_completada_real&&new Date(t.fecha_completada_real)>=desde;
     });
   }
 
