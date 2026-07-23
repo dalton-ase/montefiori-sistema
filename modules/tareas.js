@@ -610,6 +610,15 @@ function task_abrirModal(TASK_ID) {
         document.getElementById('task-cierre-section').style.display = '';
       }
 
+      // Botón "Iniciar tarea" para Pendiente o Vencida
+      if (t.puede_mover && (t.estado === 'Pendiente' || t.estado === 'Vencida')) {
+        footer.innerHTML = '<button class="btn btn-secondary" onclick="task_cerrarModal()">Cancelar</button>' +
+          '<button class="btn btn-accent" onclick="task_moverEstado(\''+t.TASK_ID+'\',\'En_proceso\')">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Iniciar tarea</button>' +
+          '<button class="btn btn-primary" id="task-btn-guardar" onclick="task_guardar()">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Guardar</button>';
+      }
+
       if (t.estado === 'Completada' || t.estado === 'Cancelada') {
         document.getElementById('task-modal-title').textContent = 'Tarea ' + (t.estado === 'Completada' ? 'completada' : 'cancelada');
         footer.innerHTML = '<div style="flex:1;font-size:var(--text-sm);color:var(--gris-mid)">' +
@@ -624,6 +633,19 @@ function task_abrirModal(TASK_ID) {
 
 function task_cerrarModal() {
   document.getElementById('task-modal').classList.remove('active');
+}
+
+async function task_moverEstado(taskId, nuevoEstado) {
+  try {
+    var res = await api('saveTarea', { TASK_ID: taskId, estado: nuevoEstado });
+    if (res.ok) {
+      toast('Tarea movida a ' + nuevoEstado.replace('_',' '), 'ok');
+      task_cerrarModal();
+      await task_cargarTareas();
+    } else {
+      toast(res.error || 'Error al mover', 'error');
+    }
+  } catch(e) { toast('Error de conexión', 'error'); }
 }
 
 async function task_guardar() {
