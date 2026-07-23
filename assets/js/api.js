@@ -11,7 +11,7 @@
  * ============================================================
  */
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwfGmwwr6f5oiQ6cLy7QvKz9ZqcxKc3xdKAc9VyvXAkVGFntxqDNH9tGoTvbGfw4eNb/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxvYZQDYSBUdTNSYMcB-Lw5BASTrjj_hvXHFAwz6s9GBCErcVF5pMJCiIEBhXWq4LbySA/exec';
 
 async function api(action, data = {}) {
   const body = { action, data };
