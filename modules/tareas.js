@@ -35,8 +35,9 @@ window.render_tareas=async function(){
       <button class="tab-btn active" id="task-tab-mias" onclick="task_cambiarTab('mias')">Mis tareas</button>
       <button class="tab-btn" id="task-tab-asignadas" onclick="task_cambiarTab('asignadas')">Asignadas por mí</button>
       <button class="tab-btn" id="task-tab-todas" onclick="task_cambiarTab('todas')">Todas</button>
+      ${APP.user?.rol==='Director'||APP.user?.rol==='Coordinador'?'<button class="tab-btn" id="task-tab-reporte" onclick="task_cambiarTab(\'reporte\')" style="color:var(--morado)">📊 Reporte</button>':''}
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <div id="task-filtros-wrap" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="search-bar" style="width:220px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" class="search-input" id="task-buscar" placeholder="Buscar..." oninput="task_filtrar()">
@@ -48,6 +49,7 @@ window.render_tareas=async function(){
   <div id="task-kanban" class="anim-3" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start;min-height:400px">
     <div style="grid-column:1/-1;padding:40px;text-align:center"><div class="loader-ring" style="margin:0 auto;border-top-color:var(--azul)"></div></div>
   </div>
+  <div id="task-reporte" class="anim-3" style="display:none"></div>
 
   <!-- MODAL PRINCIPAL -->
   <div class="modal-backdrop" id="task-modal">
@@ -249,8 +251,163 @@ function task_renderMetricas(){
   c.innerHTML=items.map(function(m){return'<div class="counter-card c-'+m.co+'"><div class="counter-icon c-'+m.co+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+m.ic+'</svg></div><div style="font-family:\'Montserrat\',sans-serif;font-size:1.6rem;font-weight:800;color:var(--oscuro);line-height:1;margin-bottom:4px">'+m.n+'</div><div style="font-size:var(--text-xs);color:var(--gris-mid);font-weight:500">'+m.l+'</div></div>';}).join('');
 }
 
+// ── Reporte Gerencial ────────────────────────────────────
+function task_renderReporte(){
+  var rep=document.getElementById('task-reporte');if(!rep)return;
+  var hoy=new Date(),hace30=new Date();hace30.setDate(hace30.getDate()-30);
+  var hace7=new Date();hace7.setDate(hace7.getDate()-7);
+  var all=TASK_DATA;
+
+  // Resumen global
+  var totalAbiertas=all.filter(function(t){return t.estado==='Pendiente'||t.estado==='En_proceso';}).length;
+  var comp30=all.filter(function(t){return t.estado==='Completada'&&t.fecha_completada_real&&new Date(t.fecha_completada_real)>=hace30;}).length;
+  var canc30=all.filter(function(t){return t.estado==='Cancelada'&&t.fecha_completada_real&&new Date(t.fecha_completada_real)>=hace30;}).length;
+  var venc=all.filter(function(t){return t.estado==='Pendiente'&&t.fecha_limite&&new Date(t.fecha_limite)<hoy;}).length;
+  var conFecha=all.filter(function(t){return t.estado==='Completada'&&t.fecha_limite;});
+  var aTiempo=conFecha.filter(function(t){return t.cumplio_a_tiempo===true;}).length;
+  var tasaGlobal=conFecha.length>0?Math.round((aTiempo/conFecha.length)*100):0;
+  var resueltas=all.filter(function(t){return t.dias_resolucion_total!==undefined&&t.dias_resolucion_total!==''&&t.estado==='Completada';});
+  var promGlobal=resueltas.length>0?(resueltas.reduce(function(s,t){return s+Number(t.dias_resolucion_total);},0)/resueltas.length).toFixed(1):'—';
+
+  // Por funcionario
+  var funcMap={};
+  TASK_FUNC.filter(function(f){return String(f.estado).toLowerCase()==='true';}).forEach(function(f){
+    funcMap[f.FUNC_ID]={nombre:f.nombre+' '+f.apellido,area:f.area,rol:f.rol,
+      asignadas:0,completadas:0,canceladas:0,vencidas:0,enProceso:0,
+      diasTotal:0,diasCount:0,aTiempo:0,conFecha:0,
+      ultimaAct:null,gestiones30d:0};
+  });
+
+  all.forEach(function(t){
+    var uid=t.asignada_a;if(!funcMap[uid])return;
+    funcMap[uid].asignadas++;
+    if(t.estado==='Completada'){
+      funcMap[uid].completadas++;
+      if(t.dias_resolucion_total!==undefined&&t.dias_resolucion_total!==''){funcMap[uid].diasTotal+=Number(t.dias_resolucion_total);funcMap[uid].diasCount++;}
+      if(t.fecha_limite){funcMap[uid].conFecha++;if(t.cumplio_a_tiempo===true)funcMap[uid].aTiempo++;}
+    }
+    if(t.estado==='Cancelada')funcMap[uid].canceladas++;
+    if(t.estado==='Pendiente'&&t.fecha_limite&&new Date(t.fecha_limite)<hoy)funcMap[uid].vencidas++;
+    if(t.estado==='En_proceso')funcMap[uid].enProceso++;
+
+    // Contar gestiones de últimos 30 días desde historial
+    try{
+      var hist=JSON.parse(t.historial||'[]');
+      hist.forEach(function(h){
+        if(String(h.func_id)===uid&&h.fecha&&new Date(h.fecha)>=hace30)funcMap[uid].gestiones30d++;
+        if(String(h.func_id)===uid&&h.fecha){
+          var fh=new Date(h.fecha);
+          if(!funcMap[uid].ultimaAct||fh>funcMap[uid].ultimaAct)funcMap[uid].ultimaAct=fh;
+        }
+      });
+    }catch(e){}
+  });
+
+  // Convertir a array y ordenar por completadas desc
+  var ranking=Object.entries(funcMap).map(function(e){var d=e[1];d.id=e[0];d.promedio=d.diasCount>0?(d.diasTotal/d.diasCount).toFixed(1):'—';d.tasa=d.conFecha>0?Math.round((d.aTiempo/d.conFecha)*100):'—';return d;});
+  ranking=ranking.filter(function(r){return r.asignadas>0;});
+  ranking.sort(function(a,b){return b.completadas-a.completadas;});
+
+  // Actividad por hora (de todas las tareas con historial)
+  var porHora=new Array(24).fill(0);
+  all.forEach(function(t){
+    try{JSON.parse(t.historial||'[]').forEach(function(h){if(h.fecha){var hr=new Date(h.fecha).getHours();porHora[hr]++;}});}catch(e){}
+  });
+  var maxHora=Math.max.apply(null,porHora)||1;
+
+  rep.innerHTML=`
+    <!-- Resumen global -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div class="counter-card c-azul"><div class="counter-icon c-azul"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></div><div style="font-family:'Montserrat',sans-serif;font-size:1.6rem;font-weight:800;color:var(--oscuro);line-height:1;margin-bottom:4px">${totalAbiertas}</div><div style="font-size:var(--text-xs);color:var(--gris-mid)">Abiertas ahora</div></div>
+      <div class="counter-card c-exito"><div class="counter-icon c-exito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg></div><div style="font-family:'Montserrat',sans-serif;font-size:1.6rem;font-weight:800;color:var(--oscuro);line-height:1;margin-bottom:4px">${comp30}</div><div style="font-size:var(--text-xs);color:var(--gris-mid)">Completadas (30d)</div></div>
+      <div class="counter-card c-peligro"><div class="counter-icon c-peligro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div style="font-family:'Montserrat',sans-serif;font-size:1.6rem;font-weight:800;color:var(--oscuro);line-height:1;margin-bottom:4px">${venc}</div><div style="font-size:var(--text-xs);color:var(--gris-mid)">Vencidas sin gestionar</div></div>
+      <div class="counter-card c-verde"><div class="counter-icon c-verde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg></div><div style="font-family:'Montserrat',sans-serif;font-size:1.6rem;font-weight:800;color:var(--oscuro);line-height:1;margin-bottom:4px">${tasaGlobal}%</div><div style="font-size:var(--text-xs);color:var(--gris-mid)">Cumplimiento global</div></div>
+    </div>
+
+    <!-- Ranking del equipo -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <div class="card-title">Rendimiento por funcionario — últimos 30 días</div>
+        <span class="badge badge-navy">${ranking.length} personas</span>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table class="table">
+          <thead><tr>
+            <th>Funcionario</th>
+            <th style="text-align:center">Asignadas</th>
+            <th style="text-align:center">En proceso</th>
+            <th style="text-align:center">Completadas</th>
+            <th style="text-align:center">Vencidas</th>
+            <th style="text-align:center">Gestiones (30d)</th>
+            <th style="text-align:center">Promedio días</th>
+            <th style="text-align:center">Cumplimiento</th>
+            <th>Última actividad</th>
+          </tr></thead>
+          <tbody>
+            ${ranking.map(function(r){
+              var tasaBg=r.tasa==='—'?'badge-gris':Number(r.tasa)>=80?'badge-exito':Number(r.tasa)>=50?'badge-alerta':'badge-peligro';
+              return'<tr>'
+                +'<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar sm">'+getInitials(r.nombre)+'</div><div><div style="font-weight:600;font-size:var(--text-sm)">'+r.nombre+'</div><div style="font-size:var(--text-xs);color:var(--gris-mid)">'+r.area+' · '+r.rol+'</div></div></div></td>'
+                +'<td style="text-align:center;font-weight:600">'+r.asignadas+'</td>'
+                +'<td style="text-align:center"><span class="badge badge-azul">'+r.enProceso+'</span></td>'
+                +'<td style="text-align:center"><span class="badge badge-exito">'+r.completadas+'</span></td>'
+                +'<td style="text-align:center">'+(r.vencidas>0?'<span class="badge badge-peligro">'+r.vencidas+'</span>':'<span style="color:var(--gris-mid)">0</span>')+'</td>'
+                +'<td style="text-align:center;font-weight:500">'+r.gestiones30d+'</td>'
+                +'<td style="text-align:center;font-weight:500">'+(r.promedio==='—'?'—':r.promedio+'d')+'</td>'
+                +'<td style="text-align:center"><span class="badge '+tasaBg+'">'+(r.tasa==='—'?'—':r.tasa+'%')+'</span></td>'
+                +'<td style="font-size:var(--text-xs);color:var(--gris-mid)">'+(r.ultimaAct?formatFechaHora(r.ultimaAct):'Sin actividad')+'</td>'
+                +'</tr>';
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Actividad por hora -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Actividad del equipo por hora del día</div>
+        <span style="font-size:var(--text-xs);color:var(--gris-mid)">Basado en registros del historial</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;align-items:flex-end;gap:3px;height:120px;padding:0 4px">
+          ${porHora.map(function(v,i){
+            var pct=Math.round((v/maxHora)*100);
+            var esLaboral=i>=7&&i<=18;
+            return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
+              +'<div style="font-size:9px;color:var(--gris-mid)">'+v+'</div>'
+              +'<div style="width:100%;height:'+Math.max(pct,2)+'%;background:'+(esLaboral?'var(--azul)':'var(--gris-borde)')+';border-radius:3px 3px 0 0;min-height:2px;transition:height .3s"></div>'
+              +'<div style="font-size:9px;color:var(--gris-mid)">'+(i<10?'0':'')+i+'</div>'
+              +'</div>';
+          }).join('')}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:16px;justify-content:center">
+          <span style="font-size:var(--text-xs);color:var(--gris-mid)"><span style="display:inline-block;width:10px;height:10px;background:var(--azul);border-radius:2px;margin-right:4px"></span>Horario laboral (7-18h)</span>
+          <span style="font-size:var(--text-xs);color:var(--gris-mid)"><span style="display:inline-block;width:10px;height:10px;background:var(--gris-borde);border-radius:2px;margin-right:4px"></span>Fuera de horario</span>
+        </div>
+      </div>
+    </div>`;
+}
+
 // ── Tabs y filtros ───────────────────────────────────────
-function task_cambiarTab(t){TASK_TAB=t;['mias','asignadas','todas'].forEach(function(x){var e=document.getElementById('task-tab-'+x);if(e)e.classList.toggle('active',x===t);});task_filtrar();}
+function task_cambiarTab(t){
+  TASK_TAB=t;
+  ['mias','asignadas','todas','reporte'].forEach(function(x){var e=document.getElementById('task-tab-'+x);if(e)e.classList.toggle('active',x===t);});
+  var kanban=document.getElementById('task-kanban');
+  var reporte=document.getElementById('task-reporte');
+  var filtros=document.getElementById('task-filtros-wrap');
+  if(t==='reporte'){
+    if(kanban)kanban.style.display='none';
+    if(reporte)reporte.style.display='';
+    if(filtros)filtros.style.display='none';
+    task_renderReporte();
+  } else {
+    if(kanban)kanban.style.display='';
+    if(reporte)reporte.style.display='none';
+    if(filtros)filtros.style.display='';
+    task_filtrar();
+  }
+}
 
 function task_filtrar(){
   var q=(document.getElementById('task-buscar')?.value||'').toLowerCase();
