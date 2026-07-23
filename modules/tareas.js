@@ -7,7 +7,7 @@
  * ============================================================
  */
 
-let TASK_DATA=[], TASK_CLI=[], TASK_FUNC=[], TASK_TAB='mias';
+let TASK_DATA=[], TASK_CLI=[], TASK_FUNC=[], TASK_TAB='mias', TASK_SHOW_ALL_DONE=false;
 const TASK_COLUMNAS=[
   {id:'Pendiente',label:'Pendiente',color:'alerta',icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'},
   {id:'En_proceso',label:'En proceso',color:'azul',icon:'<path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/>'},
@@ -266,7 +266,22 @@ function task_filtrar(){
     return(!q||nm.indexOf(q)>=0||(t.descripcion||'').toLowerCase().indexOf(q)>=0)&&(!pr||t.prioridad===pr)&&(!ar||t.area_responsable===ar);
   });
   data=data.filter(function(t){return t.estado!=='Cancelada';});
+
+  // Filtrar completadas: solo últimos 7 días salvo que se pida ver todas
+  if(!TASK_SHOW_ALL_DONE){
+    var hace7d=new Date();hace7d.setDate(hace7d.getDate()-7);
+    data=data.filter(function(t){
+      if(t.estado!=='Completada')return true;
+      return t.fecha_completada_real&&new Date(t.fecha_completada_real)>=hace7d;
+    });
+  }
+
   task_renderKanban(data);
+}
+
+function task_toggleCompletadas(){
+  TASK_SHOW_ALL_DONE=!TASK_SHOW_ALL_DONE;
+  task_filtrar();
 }
 
 // ── Kanban ───────────────────────────────────────────────
@@ -281,14 +296,28 @@ function task_renderKanban(data){
   var fgMap={alerta:'var(--alerta)',azul:'var(--azul-dark)',exito:'var(--exito)',peligro:'var(--peligro)'};
   board.innerHTML=TASK_COLUMNAS.map(function(col){
     var cards=data.filter(function(t){return t._col===col.id;});
+    var totalCompletadas=col.id==='Completada'?TASK_DATA.filter(function(t){return t.estado==='Completada';}).length:0;
+    var btnVerTodas='';
+    if(col.id==='Completada'){
+      if(!TASK_SHOW_ALL_DONE&&totalCompletadas>cards.length){
+        btnVerTodas='<div style="padding:8px 10px;text-align:center;border-top:1px solid var(--gris-borde)">'
+          +'<button class="btn btn-ghost btn-sm" onclick="task_toggleCompletadas()" style="font-size:var(--text-xs);color:var(--azul)">'
+          +'Ver todas ('+totalCompletadas+')</button></div>';
+      } else if(TASK_SHOW_ALL_DONE){
+        btnVerTodas='<div style="padding:8px 10px;text-align:center;border-top:1px solid var(--gris-borde)">'
+          +'<button class="btn btn-ghost btn-sm" onclick="task_toggleCompletadas()" style="font-size:var(--text-xs);color:var(--gris-mid)">'
+          +'Solo últimos 7 días</button></div>';
+      }
+    }
     return'<div class="kanban-col" ondragover="task_dragOver(event)" ondragleave="task_dragLeave(event)" ondrop="task_drop(event,\''+col.id+'\')">'
       +'<div class="kanban-col-header"><div class="kanban-col-title" style="color:var('+colorMap[col.color]+')">'
       +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+col.icon+'</svg>'+col.label
+      +(col.id==='Completada'&&!TASK_SHOW_ALL_DONE?' <span style="font-size:var(--text-xs);font-weight:400;color:var(--gris-mid)">(7d)</span>':'')
       +'</div><span class="kanban-col-count" style="background:'+bgMap[col.color]+';color:'+fgMap[col.color]+'">'+cards.length+'</span></div>'
       +'<div class="kanban-col-body">'
       +(cards.length===0?'<div style="padding:20px 10px;text-align:center;color:var(--gris-borde);font-size:var(--text-xs)">Sin tareas</div>'
         :cards.map(function(t){return task_renderCard(t,col.id);}).join(''))
-      +'</div></div>';
+      +'</div>'+btnVerTodas+'</div>';
   }).join('');
 }
 
