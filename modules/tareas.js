@@ -103,14 +103,24 @@ window.render_tareas=async function(){
           <div id="task-part-lista"></div>
         </div>
 
-        <!-- Cierre -->
-        <div id="task-cierre-section" style="display:none;padding:14px 16px;background:var(--verde-light);border-radius:var(--r);border:1px solid var(--verde-alpha);margin-top:8px">
+        <!-- Gestión / Registro de actividad -->
+        <div id="task-gestion-section" style="display:none;padding:14px 16px;background:var(--navy-light);border-radius:var(--r);border:1px solid var(--navy-alpha);margin-top:8px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--verde-dark)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-            <span style="font-size:var(--text-sm);font-weight:600;color:var(--verde-dark)">Cerrar tarea</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span style="font-size:var(--text-sm);font-weight:600;color:var(--navy)">Registro de gestión</span>
           </div>
-          <div class="form-group" style="margin-bottom:10px"><label class="form-label">Estado final</label><select class="form-control" id="task-estado-cierre"><option value="Completada">Completada</option><option value="Cancelada">Cancelada</option></select></div>
-          <div class="form-group" style="margin-bottom:0"><label class="form-label req">Respuesta / Motivo de cierre</label><textarea class="form-control" id="task-respuesta" rows="2" placeholder="Describe cómo se resolvió o por qué se cancela..."></textarea></div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Acción</label>
+            <select class="form-control" id="task-accion-gestion" onchange="task_cambiarAccionGestion()">
+              <option value="en_gestion">En gestión — la tarea continúa</option>
+              <option value="Completada">Finalizar como Completada</option>
+              <option value="Cancelada">Finalizar como Cancelada</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label req" id="task-obs-label">Observaciones de gestión</label>
+            <textarea class="form-control" id="task-respuesta" rows="2" placeholder="Registra qué se hizo, qué respondió el cliente, próximos pasos..."></textarea>
+          </div>
         </div>
 
         <!-- Historial de gestión -->
@@ -374,6 +384,43 @@ function task_detectarCambioFecha(){
   if(orig&&nueva&&nueva!==orig){sec.style.display='';} else{sec.style.display='none';}
 }
 
+// ── Cambiar visual según acción de gestión ───────────────
+function task_cambiarAccionGestion(){
+  var accion=document.getElementById('task-accion-gestion').value;
+  var sec=document.getElementById('task-gestion-section');
+  var label=document.getElementById('task-obs-label');
+  var ta=document.getElementById('task-respuesta');
+  var footer=document.getElementById('task-modal-footer');
+  var TID=document.getElementById('task-id').value;
+
+  if(accion==='en_gestion'){
+    sec.style.background='var(--navy-light)';sec.style.borderColor='var(--navy-alpha)';
+    if(label)label.textContent='Observaciones de gestión';
+    if(ta)ta.placeholder='Registra qué se hizo, qué respondió el cliente, próximos pasos...';
+    footer.innerHTML='<button class="btn btn-secondary" onclick="task_cerrarModal()">Cancelar</button>'
+      +'<button class="btn btn-primary" id="task-btn-guardar" onclick="task_guardar()">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg> Guardar gestión</button>';
+  } else if(accion==='Completada'){
+    sec.style.background='var(--verde-light)';sec.style.borderColor='var(--verde-alpha)';
+    if(label)label.textContent='Respuesta de cierre';
+    if(ta)ta.placeholder='Describe cómo se resolvió la tarea...';
+    footer.innerHTML='<button class="btn btn-secondary" onclick="task_cerrarModal()">Cancelar</button>'
+      +'<button class="btn btn-primary" id="task-btn-guardar" onclick="task_guardar()">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg> Guardar</button>'
+      +'<button class="btn btn-verde" onclick="task_guardar()" style="margin-left:4px">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Cerrar tarea</button>';
+  } else {
+    sec.style.background='var(--peligro-light)';sec.style.borderColor='var(--peligro-borde)';
+    if(label)label.textContent='Motivo de cancelación';
+    if(ta)ta.placeholder='Explica por qué se cancela esta tarea...';
+    footer.innerHTML='<button class="btn btn-secondary" onclick="task_cerrarModal()">Cancelar</button>'
+      +'<button class="btn btn-primary" id="task-btn-guardar" onclick="task_guardar()">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg> Guardar</button>'
+      +'<button class="btn btn-danger" onclick="task_guardar()" style="margin-left:4px">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancelar tarea</button>';
+  }
+}
+
 // ── Participantes ────────────────────────────────────────
 function task_toggleAgregarPart(){
   var el=document.getElementById('task-part-agregar');
@@ -432,7 +479,7 @@ function task_renderHistorial(taskId){
 function task_abrirModal(TASK_ID){
   TASK_ID=TASK_ID||null;
   document.getElementById('task-error').style.display='none';
-  document.getElementById('task-cierre-section').style.display='none';
+  document.getElementById('task-gestion-section').style.display='none';
   document.getElementById('task-obs-section').style.display='none';
   document.getElementById('task-historial-section').style.display='none';
   document.getElementById('task-participantes-section').style.display='none';
@@ -463,7 +510,11 @@ function task_abrirModal(TASK_ID){
       document.getElementById('task-fecha-original').value=fl;
 
       var abierta=t.estado==='Pendiente'||t.estado==='En_proceso'||t.estado==='Vencida';
-      if(t.puede_mover&&abierta)document.getElementById('task-cierre-section').style.display='';
+      if(t.puede_mover&&abierta){
+        document.getElementById('task-gestion-section').style.display='';
+        document.getElementById('task-accion-gestion').value='en_gestion';
+        task_cambiarAccionGestion();
+      }
 
       // Botón Iniciar para Pendiente/Vencida
       if(t.puede_mover&&(t.estado==='Pendiente'||t.estado==='Vencida')){
@@ -480,7 +531,7 @@ function task_abrirModal(TASK_ID){
       // Tarea cerrada = modo lectura
       if(t.estado==='Completada'||t.estado==='Cancelada'){
         document.getElementById('task-modal-title').textContent='Tarea '+(t.estado==='Completada'?'completada':'cancelada');
-        document.getElementById('task-cierre-section').style.display='none';
+        document.getElementById('task-gestion-section').style.display='none';
         footer.innerHTML='<div style="flex:1;font-size:var(--text-sm);color:var(--gris-mid)">'+(t.estado==='Completada'?'✅':'❌')+' Cerrada el '+formatFecha(t.fecha_cierre)+(t.respuesta_cierre?' — '+t.respuesta_cierre:'')+'</div><button class="btn btn-secondary" onclick="task_cerrarModal()">Cerrar</button>';
       }
     }
@@ -503,10 +554,10 @@ async function task_guardar(){
   if(!area){err.textContent='Selecciona el área responsable.';err.style.display='block';return;}
   if(!desc){err.textContent='Escribe una descripción.';err.style.display='block';return;}
 
-  var esCierre=document.getElementById('task-cierre-section').style.display!=='none';
-  var estCierre=document.getElementById('task-estado-cierre')?.value;
+  var esGestion=document.getElementById('task-gestion-section').style.display!=='none';
+  var accionGestion=document.getElementById('task-accion-gestion')?.value||'';
   var resp=document.getElementById('task-respuesta')?.value.trim();
-  if(esCierre&&estCierre&&!resp){err.textContent='La respuesta de cierre es obligatoria.';err.style.display='block';return;}
+  if(esGestion&&!resp){err.textContent='Las observaciones son obligatorias.';err.style.display='block';return;}
 
   // Observación de reprogramación
   var obsCambio=document.getElementById('task-obs-cambio')?.value.trim()||'';
@@ -516,6 +567,13 @@ async function task_guardar(){
     err.textContent='La observación es obligatoria al cambiar la fecha límite.';err.style.display='block';return;
   }
 
+  // Determinar estado según acción
+  var estadoFinal=undefined;
+  if(esGestion){
+    if(accionGestion==='Completada'||accionGestion==='Cancelada') estadoFinal=accionGestion;
+    // en_gestion no cambia estado, solo registra observación
+  }
+
   var data={
     TASK_ID:TID||undefined,CLI_ID:document.getElementById('task-cliente')?.value||'',
     asignada_a:asig,area_responsable:area,
@@ -523,10 +581,10 @@ async function task_guardar(){
     descripcion:desc,instrucciones:document.getElementById('task-instrucciones')?.value.trim()||'',
     prioridad:document.getElementById('task-prioridad')?.value||'Media',
     fecha_limite:fechaNueva,creada_por:APP.user?.id||'',
-    estado:esCierre&&estCierre?estCierre:(TID?undefined:'Pendiente'),
-    respuesta_cierre:esCierre?resp:'',
-    fecha_cierre:esCierre&&estCierre?new Date().toISOString().split('T')[0]:'',
-    observacion_cambio:obsCambio
+    estado:estadoFinal||(TID?undefined:'Pendiente'),
+    respuesta_cierre:estadoFinal?resp:'',
+    fecha_cierre:estadoFinal?new Date().toISOString().split('T')[0]:'',
+    observacion_cambio:obsCambio||(esGestion&&accionGestion==='en_gestion'?resp:'')
   };
 
   var btn=document.getElementById('task-btn-guardar');if(!btn)return;
